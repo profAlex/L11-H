@@ -60,6 +60,7 @@ export const jwtService = {
     async createRefreshToken(
         payload: JwtRefreshPayloadType,
     ): Promise<CustomResult<{refreshToken: string}>> {
+
         if (!payload.userId) {
             console.error("userID is missing");
 

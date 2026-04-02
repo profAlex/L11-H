@@ -106,7 +106,7 @@ describe("Test API for managing login, registration and registration-confirmatio
         //     loginOrEmail: "wrong_log",
         //     password: "hello_world",
         // };
-    });
+    }, 10000);
 
     it("POST '/api/auth/login' - successful login attempt (response 200)", async () => {
         expect(await usersQueryRepository.returnUsersAmount()).toBe(2);

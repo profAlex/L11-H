@@ -3,7 +3,7 @@ import { envConfig } from "../../config";
 import { UUIDgeneration } from "../../adapters/randomUUIDgeneration/UUIDgeneration";
 
 export class UserSession {
-    _id: ObjectId;
+    // _id: ObjectId;
     userId: string;
     deviceId: string;
     issuedAt: Date;
@@ -17,7 +17,7 @@ export class UserSession {
         deviceName: string,
         deviceIp: string,
     ) {
-        this._id = _id;
+        // this._id = _id;
         this.userId = userId;
         this.deviceId = UUIDgeneration.generateUUID();
 

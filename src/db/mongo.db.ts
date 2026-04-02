@@ -1,4 +1,4 @@
-import { Collection, Db, IndexDescriptionInfo, MongoClient } from "mongodb";
+import { Collection, Db, MongoClient } from "mongodb";
 import { BlogViewModel } from "../routers/router-types/blog-view-model";
 import { PostViewModel } from "../routers/router-types/post-view-model";
 import { UserCollectionStorageModel } from "../routers/router-types/user-storage-model";
@@ -7,6 +7,11 @@ import { RefreshTokensStorageModel } from "../routers/router-types/refresh-token
 import { SessionStorageModel } from "../routers/router-types/auth-SessionStorageModel";
 import { RequestRestrictionStorageModel } from "../routers/router-types/auth-RequestRestrictionStorageModel";
 import { envConfig } from "../config";
+
+import mongoose from "mongoose";
+//TODO:
+// импорты моделей для mongoose - вводить оставшиеся модели для коллекций
+import { SessionModel } from "./mongoose-models";
 
 const DB_NAME = "bloggers_db";
 export const BLOGGERS_COLLECTION_NAME = "bloggers_collection";
@@ -34,11 +39,9 @@ export let refreshTokensBlackListCollection: Collection<RefreshTokensStorageMode
 export let sessionsDataStorage: Collection<SessionStorageModel>;
 export let requestsRestrictionDataStorage: Collection<RequestRestrictionStorageModel>;
 
-export async function runDB() {
-    // console.log('⏱️ runDB() called at:', new Date().toISOString());
-    // const stack = new Error().stack;
-    // console.log('Call stack:', stack);
 
+
+export async function runDB() {
     client = new MongoClient(URI);
     db = client.db(DB_NAME);
 
@@ -56,85 +59,17 @@ export async function runDB() {
 
     // настройка автоудаления токенов
     await refreshTokensBlackListCollection.createIndex(
-        { createdAt: 1 }, // поле для индексации
-        {
-            // unique: true,  // это лишнее, не ускоряет поиск по индексированному полю, это просто встроенная провекра на уникальность, для нашего случая помоему излишне
-            expireAfterSeconds: 86400, // считается в секундах, т.е. 24×60×60 = 86400 это будут одни сутки, а, например, 604 800 сек = 7 суток
-        },
+        { createdAt: 1 },
+        { expireAfterSeconds: 86400 },
     );
 
-
-
-    // настройка автоудаления сессий
+    // Старое хранилище сессий (Native) - пока оставляем для совместимости
     sessionsDataStorage = db.collection<SessionStorageModel>(SESSIONS_COLLECTION_NAME);
-
-    // const existingIndexes = await sessionsDataStorage.indexes();
-    // const existingIndex = existingIndexes.find(idx => idx.name === "createdAt");
-    //
-    // if (!existingIndex) {
-    //     // Создаём индекс, если его нет
-    //     await sessionsDataStorage.createIndex(
-    //         { createdAt: 1 },
-    //         { name: "createdAt", expireAfterSeconds: 25 }
-    //     );
-    // } else if (existingIndex.expireAfterSeconds !== 25) {
-    //     // Удаляем старый и создаём новый, если TTL не совпадает
-    //     await sessionsDataStorage.dropIndex("createdAt");
-    //     await sessionsDataStorage.createIndex(
-    //         { createdAt: 1 },
-    //         { name: "createdAt", expireAfterSeconds: 25 }
-    //     )
-    // }
-    // const indexes = await sessionsDataStorage.indexes();
-    // const indexExists = indexes.some(idx => idx.name === 'createdAt');
-    //
-    // if (indexExists) {
-    //     await sessionsDataStorage.dropIndex('createdAt');
-    // } else {
-    //     console.log('Index "createdAt" not found — skipping drop.');
-    // }
-
-    // try {
-    //     await sessionsDataStorage.dropIndex('createdAt_1');
-    // } catch (error) {
-    //     console.log( error); // Перебрасываем ошибку, если это не «индекс не найден»
-    // }
-    //
-    // try {
-    //     await sessionsDataStorage.dropIndex('createdAt');
-    // } catch (error) {
-    //     console.log( error); // Перебрасываем ошибку, если это не «индекс не найден»
-    // }
-    //
-    // await sessionsDataStorage.createIndex(
-    //     { createdAt: 1 }, // поле для индексации
-    //     {
-    //         expireAfterSeconds: 25, // считается в секундах, например: 24×60×60 = 86400 это будут одни сутки, а, например, 604 800 сек = 7 суток
-    //     },
-    // );
-
-
-    // try {
-    //     await sessionsDataStorage.dropIndex('dateOfRequest_1');
-    // } catch (error) {
-    //     console.log( error); // Перебрасываем ошибку, если это не «индекс не найден»
-    // }
-    //
-    // try {
-    //     await sessionsDataStorage.dropIndex('dateOfRequest');
-    // } catch (error) {
-    //     console.log( error); // Перебрасываем ошибку, если это не «индекс не найден»
-    // }
-
     requestsRestrictionDataStorage = db.collection<RequestRestrictionStorageModel>(REQUESTS_RESTRICTIONS_COLLECTION_NAME);
-    // await requestsRestrictionDataStorage.createIndex(
-    //     { dateOfRequest: 1 }, // поле для индексации
-    //     {
-    //         expireAfterSeconds: 15, // считается в секундах, например: 24×60×60 = 86400 это будут одни сутки, а, например, 604 800 сек = 7 суток
-    //     },
-    // );
 
-    // Для sessions — только свой индекс
+    // вызов setupCollectionIndexes для 'sessions_collection' здесь теперь не нужен, этим занимается mongoose
+
+    /*
     await setupCollectionIndexes(
         sessionsDataStorage,
         'sessions',
@@ -147,8 +82,9 @@ export async function runDB() {
             }
         ]
     );
+    */
 
-// Для requests_restrictions — только свой индекс
+    // Для requests_restrictions — пока оставляем старый способ
     await setupCollectionIndexes(
         requestsRestrictionDataStorage,
         'requests_restrictions',
@@ -161,13 +97,24 @@ export async function runDB() {
             }
         ]
     );
-    
+
     try {
+        // Подключаем нативный драйвер
         await client.connect();
+
+        // ПОДКЛЮЧАЕМ MONGOOSE (Гибридный режим)
+        await mongoose.connect(URI, { dbName: DB_NAME });
+
+        // это для удаления старых индексов и создания новых конкретно для коллекции,
+        // к которой подключаемся с помощью mongoose
+        await mongoose.connection.collection('sessions_collection').dropIndexes();
+        console.log("♻️ All indexes dropped for sessions_collection");
+
         await db.command({ ping: 1 });
-        console.log(`🟢 Connected to DB ${DB_NAME}`);
+        console.log(`🟢 Connected to DB ${DB_NAME} (Hybrid: Native + Mongoose)`);
     } catch (error) {
         await client.close();
+        await mongoose.disconnect();
         throw new Error(`Database not connected: ${error}`);
     }
 }
@@ -176,16 +123,17 @@ export async function closeDB() {
     try {
         if (client) {
             await client.close();
-
-            console.log("🛑 MongoDB connection closed");
             client = null;
-            db = null;
         }
+        // Закрываем соединение Mongoose
+        await mongoose.disconnect();
+
+        console.log("🛑 MongoDB & Mongoose connections closed");
+        db = null;
     } catch (error) {
         console.error("Error: ", error);
     }
 }
-
 
 async function setupCollectionIndexes(
     collection: Collection<SessionStorageModel> | Collection<RequestRestrictionStorageModel>,
@@ -197,7 +145,6 @@ async function setupCollectionIndexes(
         description: string;
     }>
 ): Promise<void> {
-    // Фильтруем индексы: берём только те, что принадлежат этой коллекции
     const relevantIndexes = indexesToSetup.filter(index => {
         if (collectionName === 'sessions') {
             return index.name === 'createdAt_1';
@@ -241,14 +188,12 @@ async function setupCollectionIndexes(
                 );
             }
         } catch (error) {
-            console.error(
-                `❌ Error processing index ${indexConfig.name}:`,
-                error
-            );
+            console.error(`❌ Error processing index ${indexConfig.name}:`, error);
             throw error;
         }
     }
 }
 
-
 export { db };
+// реэкспортируем модель для использования в репозиториях, чтобы не ломать логику импортов в прочих файлах
+export { SessionModel };

@@ -30,6 +30,7 @@ import { PasswordRecoveryInputModel } from "../routers/router-types/auth-passwor
 import { NewPasswordRecoveryInputModel } from "../routers/router-types/auth-new-password-recovery-input-model";
 import { UsersCommandRepository } from "../repository-layers/command-repository-layer/users-command-repository";
 import { TYPES } from "../composition-root/ioc-types";
+import { SessionModel } from "../db/mongoose-models";
 
 @injectable()
 export class AuthCommandService {
@@ -38,8 +39,7 @@ export class AuthCommandService {
         @inject(TYPES.UsersQueryRepository) protected usersQueryRepository: UsersQueryRepository,
         @inject(TYPES.SessionsCommandRepository) protected sessionsCommandRepository: SessionsCommandRepository,
         @inject(TYPES.BcryptService) protected bcryptService: BcryptService
-    ) {
-    }
+    ) { };
 
     async loginUser(
         req: RequestWithBody<AuthLoginInputModel>,
@@ -100,27 +100,43 @@ export class AuthCommandService {
         }
 
         // создаем мета данные для сессии
-        const sessionObjectId = new ObjectId();
-        const deviceName = req.get("User-Agent") || ""; // или req.headers['user-agent'] - обязательно с малыми, т.к. по стандарту http все приводится к строчным. Методы .get и .header же осуществляют приведение к строчным(маленьким) под капотом
-        const deviceIp = req.ip || "";
+        // const sessionObjectId = new ObjectId();
+        const deviceName = req.get("User-Agent") || "unknown device"; // или req.headers['user-agent'] - обязательно с малыми, т.к. по стандарту http все приводится к строчным. Методы .get и .header же осуществляют приведение к строчным(маленьким) под капотом
+        const deviceIp = req.ip || "0.0.0.0";
 
-        // создаем объект сессии
-        const tempSession = new UserSession(
-            sessionObjectId,
-            user.id,
-            deviceName,
-            deviceIp
-        );
-        const sessionIat = tempSession.issuedAt;
-        const sessionExp = tempSession.expiresAt;
-        const sessionDeviceId = tempSession.deviceId;
+        // // создаем объект сессии
+        // const tempSession = new UserSession(
+        //     sessionObjectId,
+        //     user.id,
+        //     deviceName,
+        //     deviceIp
+        // );
+
+        // здесь создаем новый объект модели сессии
+        const sessionDoc = new SessionModel({
+            userId: user.id,
+            deviceName: deviceName,
+            deviceIp: deviceIp
+        });
+
+        // Хук pre('validate') называется «ленивым». Он не срабатывает в тот момент, когда ты пишешь new SessionModel().
+        // Он срабатывает только тогда, когда запускается процесс валидации — обычно это происходит автоматически прямо перед вызовом .save().
+        // ПРИНУДИТЕЛЬНО запускаем хуки и валидацию прямо сейчас (синхронно)
+        // для асинхронных хуков (для нашего случая, у нас хук асинхронный) нужна будет соответственно асинхронная версия validate.
+        await sessionDoc.validate();
+
+        // эти даные создаются в хуке валидэйт
+        const sessionIat = sessionDoc.issuedAt;
+        const sessionExp = sessionDoc.expiresAt;
+        const sessionDeviceId = sessionDoc.deviceId;
+
 
         // здесь логика у нас следующая
         // - в любом случае создаем новую сессию со всеми присущими определенными идентификаторами и параметрами
 
         // создаем сессию в базе
         const isSuccessfulSessionCreated =
-            await this.sessionsCommandRepository.createSession(tempSession);
+            await this.sessionsCommandRepository.createSession(sessionDoc);
 
         if (!isSuccessfulSessionCreated) {
             console.error(
@@ -156,6 +172,8 @@ export class AuthCommandService {
                 errorsMessages: pairOfToken.errorsMessages
             };
         }
+
+        console.warn("TOKENS GENERATED:", !!pairOfToken.data);
 
         return pairOfToken;
     }

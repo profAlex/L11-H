@@ -30,6 +30,7 @@ export async function createTokenPair(
         iat: Math.floor(sessionIat.getTime() / 1000), // Math.floor лишнее? мы уже передали сформированный с учетом округления тип Data
         exp: Math.floor(sessionExp.getTime() / 1000), // Math.floor лишнее? мы уже передали сформированный с учетом округления тип Data
     });
+
     if (!resCreatingRefreshToken.data?.refreshToken) {
         console.error(resCreatingRefreshToken.statusDescription);
         return {
