@@ -9,9 +9,8 @@ import { RequestRestrictionStorageModel } from "../routers/router-types/auth-Req
 import { envConfig } from "../config";
 
 import mongoose from "mongoose";
-//TODO:
-// импорты моделей для mongoose - вводить оставшиеся модели для коллекций
-import { SessionModel } from "./mongoose-models";
+import { SessionModel } from "./mongoose-session-collection-model";
+import { CommentModel } from "./mongoose-comment-collection-model";
 
 const DB_NAME = "bloggers_db";
 export const BLOGGERS_COLLECTION_NAME = "bloggers_collection";
@@ -19,15 +18,15 @@ export const POSTS_COLLECTION_NAME = "posts_collection";
 export const USERS_COLLECTION_NAME = "users_collection";
 export const COMMENTS_COLLECTION_NAME = "comments_collection";
 export const REFRESH_TOKENS_COLLECTION_NAME = "refresh_tokens_collection";
-
 export const SESSIONS_COLLECTION_NAME = "sessions_collection";
-export const REQUESTS_RESTRICTIONS_COLLECTION_NAME = "requests_restrictions_collection";
+export const REQUESTS_RESTRICTIONS_COLLECTION_NAME =
+    "requests_restrictions_collection";
+export const LIKES_COLLECTION_NAME = "likes_collection";
 
 const URI =
     "mongodb+srv://admin:admin@learningcluster.f1zm90x.mongodb.net/?retryWrites=true&w=majority&appName=LearningCluster";
 
 let db: Db | null = null;
-
 export let client: MongoClient | null = null;
 
 export let bloggersCollection: Collection<BlogViewModel>;
@@ -39,81 +38,69 @@ export let refreshTokensBlackListCollection: Collection<RefreshTokensStorageMode
 export let sessionsDataStorage: Collection<SessionStorageModel>;
 export let requestsRestrictionDataStorage: Collection<RequestRestrictionStorageModel>;
 
-
-
 export async function runDB() {
     client = new MongoClient(URI);
     db = client.db(DB_NAME);
 
+    // Инициализация коллекций (Native Driver)
     bloggersCollection = db.collection<BlogViewModel>(BLOGGERS_COLLECTION_NAME);
     postsCollection = db.collection<PostViewModel>(POSTS_COLLECTION_NAME);
-    usersCollection = db.collection<UserCollectionStorageModel>(
-        USERS_COLLECTION_NAME,
-    );
-    commentsCollection = db.collection<CommentStorageModel>(
-        COMMENTS_COLLECTION_NAME,
-    );
-    refreshTokensBlackListCollection = db.collection<RefreshTokensStorageModel>(
-        REFRESH_TOKENS_COLLECTION_NAME,
-    );
-
-    // настройка автоудаления токенов
-    await refreshTokensBlackListCollection.createIndex(
-        { createdAt: 1 },
-        { expireAfterSeconds: 86400 },
-    );
-
-    // Старое хранилище сессий (Native) - пока оставляем для совместимости
+    usersCollection = db.collection<UserCollectionStorageModel>(USERS_COLLECTION_NAME);
+    refreshTokensBlackListCollection = db.collection<RefreshTokensStorageModel>(REFRESH_TOKENS_COLLECTION_NAME);
+    commentsCollection = db.collection<CommentStorageModel>(COMMENTS_COLLECTION_NAME);
     sessionsDataStorage = db.collection<SessionStorageModel>(SESSIONS_COLLECTION_NAME);
     requestsRestrictionDataStorage = db.collection<RequestRestrictionStorageModel>(REQUESTS_RESTRICTIONS_COLLECTION_NAME);
 
-    // вызов setupCollectionIndexes для 'sessions_collection' здесь теперь не нужен, этим занимается mongoose
-
-    /*
-    await setupCollectionIndexes(
-        sessionsDataStorage,
-        'sessions',
-        [
-            {
-                field: 'createdAt',
-                name: 'createdAt_1',
-                ttl: envConfig.refreshTokenLifetime+5,
-                description: 'TTL index for sessions (25s)'
-            }
-        ]
-    );
-    */
-
-    // Для requests_restrictions — пока оставляем старый способ
-    await setupCollectionIndexes(
-        requestsRestrictionDataStorage,
-        'requests_restrictions',
-        [
-            {
-                field: 'dateOfRequest',
-                name: 'dateOfRequest_1',
-                ttl: 30,
-                description: 'TTL index for requests_restrictions (15s)'
-            }
-        ]
-    );
-
     try {
-        // Подключаем нативный драйвер
+        // подключаем базу данных, пока гибридно
         await client.connect();
-
-        // ПОДКЛЮЧАЕМ MONGOOSE (Гибридный режим)
         await mongoose.connect(URI, { dbName: DB_NAME });
 
-        // это для удаления старых индексов и создания новых конкретно для коллекции,
-        // к которой подключаемся с помощью mongoose
-        await mongoose.connection.collection('sessions_collection').dropIndexes();
-        console.log("♻️ All indexes dropped for sessions_collection");
+        // очищаем индексы, удаляем старые TTL или некорректные уникальне индексы
+        try {
+            await mongoose.connection.collection(SESSIONS_COLLECTION_NAME).dropIndexes();
+            console.log(`♻️ All indexes dropped for ${SESSIONS_COLLECTION_NAME}`);
+
+            // await mongoose.connection.collection(COMMENTS_COLLECTION_NAME).dropIndexes();
+            // console.log(`♻️ All indexes dropped for ${COMMENTS_COLLECTION_NAME}`);
+        } catch (e) {
+            console.log("ℹ️ No indexes to drop or collections not created yet");
+        }
+
+        // После dropIndexes база пустая, принудительно заставляем Mongoose применить создание индексов
+        // запускаем оба асинхронных процесса параллельно
+        await Promise.all([
+            SessionModel.createIndexes(),
+            // CommentModel.createIndexes()
+        ]);
+        console.log("✅ Fresh Mongoose indexes created successfully");
+
+        // настройка индексов для коллекций, которые еще не в Mongoose
+        // refreshTokensBlackListCollection уже deprecated, нужно будет удалить
+        await refreshTokensBlackListCollection.createIndex(
+            { createdAt: 1 },
+            { expireAfterSeconds: 86400 },
+        );
+
+        await setupCollectionIndexes(
+            requestsRestrictionDataStorage,
+            "requests_restrictions",
+            [
+                {
+                    field: "dateOfRequest",
+                    name: "dateOfRequest_1",
+                    ttl: 30,
+                    description: "TTL index for requests_restrictions (30s)",
+                },
+            ],
+        );
 
         await db.command({ ping: 1 });
         console.log(`🟢 Connected to DB ${DB_NAME} (Hybrid: Native + Mongoose)`);
+
     } catch (error) {
-        await client.close();
+        console.error("❌ Database connection error:", error);
+        if (client) await client.close();
         await mongoose.disconnect();
         throw new Error(`Database not connected: ${error}`);
     }
@@ -121,79 +108,37 @@ export async function runDB() {
 
 export async function closeDB() {
     try {
-        if (client) {
-            await client.close();
-            client = null;
-        }
-        // Закрываем соединение Mongoose
+        if (client) await client.close();
         await mongoose.disconnect();
-
         console.log("🛑 MongoDB & Mongoose connections closed");
-        db = null;
     } catch (error) {
-        console.error("Error: ", error);
+        console.error("Error during closing DB: ", error);
     }
 }
 
+// вспомогательная функция
 async function setupCollectionIndexes(
-    collection: Collection<SessionStorageModel> | Collection<RequestRestrictionStorageModel>,
+    collection: Collection<any>,
     collectionName: string,
-    indexesToSetup: Array<{
-        field: string;
-        name: string;
-        ttl: number;
-        description: string;
-    }>
+    indexesToSetup: Array<{ field: string; name: string; ttl: number; description: string }>
 ): Promise<void> {
-    const relevantIndexes = indexesToSetup.filter(index => {
-        if (collectionName === 'sessions') {
-            return index.name === 'createdAt_1';
-        } else if (collectionName === 'requests_restrictions') {
-            return index.name === 'dateOfRequest_1';
-        }
-        return false;
-    });
-
-    for (const indexConfig of relevantIndexes) {
+    for (const indexConfig of indexesToSetup) {
         try {
             const existingIndexes = await collection.indexes();
             const existingIndex = existingIndexes.find(idx => idx.name === indexConfig.name);
 
-            if (!existingIndex) {
-                console.log(`Creating index ${indexConfig.name} for ${collectionName}`);
+            if (!existingIndex || existingIndex.expireAfterSeconds !== indexConfig.ttl) {
+                if (existingIndex) await collection.dropIndex(indexConfig.name);
                 await collection.createIndex(
                     { [indexConfig.field]: 1 },
-                    {
-                        name: indexConfig.name,
-                        expireAfterSeconds: indexConfig.ttl
-                    }
+                    { name: indexConfig.name, expireAfterSeconds: indexConfig.ttl }
                 );
-                console.log(`✓ Index ${indexConfig.name} created successfully`);
-            } else if (existingIndex.expireAfterSeconds !== indexConfig.ttl) {
-                console.log(
-                    `Updating index ${indexConfig.name}: TTL ${existingIndex.expireAfterSeconds} → ${indexConfig.ttl}`
-                );
-                await collection.dropIndex(indexConfig.name);
-                await collection.createIndex(
-                    { [indexConfig.field]: 1 },
-                    {
-                        name: indexConfig.name,
-                        expireAfterSeconds: indexConfig.ttl
-                    }
-                );
-                console.log(`✓ Index ${indexConfig.name} updated successfully`);
-            } else {
-                console.log(
-                    `ℹ️ Index ${indexConfig.name} already exists with correct TTL (${indexConfig.ttl}s)`
-                );
+                console.log(`✓ Index ${indexConfig.name} for ${collectionName} processed`);
             }
         } catch (error) {
-            console.error(`❌ Error processing index ${indexConfig.name}:`, error);
-            throw error;
+            console.error(`❌ Error in setupCollectionIndexes for ${collectionName}:`, error);
         }
     }
 }
 
-export { db };
-// реэкспортируем модель для использования в репозиториях, чтобы не ломать логику импортов в прочих файлах
-export { SessionModel };
+export { db, SessionModel, CommentModel };

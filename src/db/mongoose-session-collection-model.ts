@@ -3,35 +3,38 @@ import { envConfig } from "../config";
 import { SessionStorageModel } from "../routers/router-types/auth-SessionStorageModel";
 import { UUIDgeneration } from "../adapters/randomUUIDgeneration/UUIDgeneration";
 import { CallbackWithoutResultAndOptionalError } from "mongoose";
+import { SESSIONS_COLLECTION_NAME } from "./mongo.db";
 
-const SessionSchema = new Schema<SessionStorageModel>({
-    // _id: { type: Schema.Types.ObjectId },
-    userId: { type: String, required: true },
-    deviceId: { type: String },
+const SessionSchema = new Schema<SessionStorageModel>(
+    {
+        // _id: { type: Schema.Types.ObjectId },
+        userId: { type: String, required: true },
+        deviceId: { type: String },
 
-    // здесь настройка TTL индекса для автоудаления: заданное время жизни
-    issuedAt: {
-        type: Date,
-        expires: envConfig.refreshTokenLifetime + 10
+        // здесь настройка TTL индекса для автоудаления: заданное время жизни
+        issuedAt: {
+            type: Date,
+            expires: envConfig.refreshTokenLifetime + 100,
+        },
+
+        deviceName: { type: String, required: true },
+        deviceIp: { type: String, required: true },
+
+        // Это поле остается для бизнес-логики (проверки валидности токена)
+        expiresAt: {
+            type: Date,
+        },
     },
-
-    deviceName: { type: String, required: true },
-    deviceIp: { type: String, required: true },
-
-    // Это поле остается для бизнес-логики (проверки валидности токена)
-    expiresAt: {
-        type: Date,
-    }
-}, {
-    collection: "sessions_collection",
-    versionKey: false,
-    timestamps: false,
-    id: false
-});
+    {
+        collection: SESSIONS_COLLECTION_NAME,
+        versionKey: false,
+        timestamps: false,
+        id: false,
+    },
+);
 
 // хук перед сохранением - здесь прописываем логику конструктора, которая была в class UserSession
-SessionSchema.pre<SessionDocument>('validate', async function() {
-
+SessionSchema.pre<SessionDocument>("validate", async function () {
     // 1. Генерация UUID, если его еще нет
     if (!this.deviceId) {
         this.deviceId = UUIDgeneration.generateUUID();
@@ -49,7 +52,7 @@ SessionSchema.pre<SessionDocument>('validate', async function() {
     // 3. Расчет expiresAt
     if (!this.expiresAt) {
         this.expiresAt = new Date(
-            this.issuedAt.getTime() + envConfig.refreshTokenLifetime * 1000
+            this.issuedAt.getTime() + envConfig.refreshTokenLifetime * 1000,
         );
     }
 
@@ -59,7 +62,10 @@ SessionSchema.pre<SessionDocument>('validate', async function() {
 
 type SessionModelType = Model<SessionStorageModel>;
 export type SessionDocument = HydratedDocument<SessionStorageModel>;
-export const SessionModel = model<SessionStorageModel, SessionModelType>("Session", SessionSchema);
+export const SessionModel = model<SessionStorageModel, SessionModelType>(
+    "Session",
+    SessionSchema,
+);
 
 // структура коллекции в базе данных
 // _id: ObjectId;

@@ -30,7 +30,7 @@ import { PasswordRecoveryInputModel } from "../routers/router-types/auth-passwor
 import { NewPasswordRecoveryInputModel } from "../routers/router-types/auth-new-password-recovery-input-model";
 import { UsersCommandRepository } from "../repository-layers/command-repository-layer/users-command-repository";
 import { TYPES } from "../composition-root/ioc-types";
-import { SessionModel } from "../db/mongoose-models";
+import { SessionModel } from "../db/mongoose-session-collection-model";
 
 @injectable()
 export class AuthCommandService {

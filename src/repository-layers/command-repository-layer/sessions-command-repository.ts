@@ -5,7 +5,7 @@ import { inject, injectable } from "inversify";
 import { ObjectId } from "mongodb";
 import { sessionsDataStorage } from "../../db/mongo.db";
 import { UserSession } from "../../common/classes/session-class";
-import { SessionDocument } from "../../db/mongoose-models";
+import { SessionDocument } from "../../db/mongoose-session-collection-model";
 
 @injectable()
 export class SessionsCommandRepository {
@@ -47,10 +47,7 @@ export class SessionsCommandRepository {
 
     async createSession(sessionDocument: SessionDocument): Promise<boolean> {
         try {
-            // Поскольку sessionDoc — это уже экземпляр модели,
-            // у него есть встроенный метод .save()
             await sessionDocument.save();
-
             return true;
         } catch (error: any) {
             console.error("Unknown error during createSession", error.message);
