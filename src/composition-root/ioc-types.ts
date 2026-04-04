@@ -5,11 +5,15 @@ export const TYPES = {
     UsersCommandService: Symbol.for("UsersCommandService"),
     UsersQueryService: Symbol.for("UsersQueryService"),
     SecurityDevicesCommandService: Symbol.for("SecurityDevicesCommandService"),
+    CommentsQueryService: Symbol.for("CommentsQueryService"),
+    CommentsCommandService: Symbol.for("CommentsCommandService"),
 
     // Repositories
     SessionsCommandRepository: Symbol.for("SessionsCommandRepository"),
     UsersQueryRepository: Symbol.for("UsersQueryRepository"),
     UsersCommandRepository: Symbol.for("UsersCommandRepository"),
+    CommentsQueryRepository: Symbol.for("CommentsQueryRepository"),
+    CommentsCommandRepository: Symbol.for("CommentsCommandRepository"),
 
     // Handlers (Controller logic)
     UsersHandler: Symbol.for("UsersHandler"),

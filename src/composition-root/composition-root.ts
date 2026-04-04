@@ -46,29 +46,26 @@ export const securityDevicesHandler = new SecurityDevicesHandler(securityDevices
 export const authHandler = new AuthHandler(authService);
 
 
-
-
-
 const container = new Container();
 
-// --- 1. Репозитории (Data Access Layer) ---
-container.bind(TYPES.SessionsCommandRepository).to(SessionsCommandRepository).inSingletonScope();
-container.bind(TYPES.UsersQueryRepository).to(UsersQueryRepository).inSingletonScope();
-container.bind(TYPES.UsersCommandRepository).to(UsersCommandRepository).inSingletonScope();
+// middleware
+container.bind(TYPES.RefreshTokenGuard).to(RefreshTokenGuard).inSingletonScope();
 
-// --- 2. Сервисы (Business Logic Layer) ---
+// хендлеры
+container.bind(TYPES.UsersHandler).to(UsersHandler).inSingletonScope();
+container.bind(TYPES.SecurityDevicesHandler).to(SecurityDevicesHandler).inSingletonScope();
+container.bind(TYPES.AuthHandler).to(AuthHandler).inSingletonScope();
+
+// сервисы
 container.bind(TYPES.BcryptService).to(BcryptService).inSingletonScope();
 container.bind(TYPES.AuthCommandService).to(AuthCommandService).inSingletonScope();
 container.bind(TYPES.UsersCommandService).to(UsersCommandService).inSingletonScope();
 container.bind(TYPES.UsersQueryService).to(UsersQueryService).inSingletonScope();
 container.bind(TYPES.SecurityDevicesCommandService).to(SecurityDevicesCommandService).inSingletonScope();
 
-// --- 3. Гварды и Мидлвары ---
-container.bind(TYPES.RefreshTokenGuard).to(RefreshTokenGuard).inSingletonScope();
-
-// --- 4. Хендлеры (Application Layer) ---
-container.bind(TYPES.UsersHandler).to(UsersHandler).inSingletonScope();
-container.bind(TYPES.SecurityDevicesHandler).to(SecurityDevicesHandler).inSingletonScope();
-container.bind(TYPES.AuthHandler).to(AuthHandler).inSingletonScope();
+// для репозиториев
+container.bind(TYPES.SessionsCommandRepository).to(SessionsCommandRepository).inSingletonScope();
+container.bind(TYPES.UsersQueryRepository).to(UsersQueryRepository).inSingletonScope();
+container.bind(TYPES.UsersCommandRepository).to(UsersCommandRepository).inSingletonScope();
 
 export { container };

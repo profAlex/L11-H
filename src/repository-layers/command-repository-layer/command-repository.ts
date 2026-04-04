@@ -710,141 +710,141 @@ export const dataCommandRepository = {
         }
     },
 
-    async updateCommentById(
-        sentCommentId: string,
-        //sentUserId: string,
-        sentContent: CommentInputModel,
-    ): Promise<CustomResult> {
-        try {
-            const res = await commentsCollection.updateOne(
-                { _id: new ObjectId(sentCommentId) },
-                { $set: { content: sentContent.content } },
-            );
+    // async updateCommentById(
+    //     sentCommentId: string,
+    //     //sentUserId: string,
+    //     sentContent: CommentInputModel,
+    // ): Promise<CustomResult> {
+    //     try {
+    //         const res = await commentsCollection.updateOne(
+    //             { _id: new ObjectId(sentCommentId) },
+    //             { $set: { content: sentContent.content } },
+    //         );
+    //
+    //         if (!res.acknowledged) {
+    //             return {
+    //                 data: null,
+    //                 statusCode: HttpStatus.InternalServerError,
+    //                 statusDescription: `Unknown error inside bloggersCollection.updateOne inside dataCommandRepository.updateCommentById`,
+    //                 errorsMessages: [
+    //                     {
+    //                         field: "bloggersCollection.updateOne inside dataCommandRepository.updateCommentById", // это служебная и отладочная информация, к ней НЕ должен иметь доступ фронтенд, обрабатываем внутри периметра работы бэкэнда
+    //                         message: `Unknown error while trying to update comment`,
+    //                     },
+    //                 ],
+    //             } as CustomResult;
+    //         }
+    //
+    //         return {
+    //             data: null,
+    //             statusCode: HttpStatus.NoContent,
+    //             statusDescription: "",
+    //             errorsMessages: [
+    //                 {
+    //                     field: "",
+    //                     message: "",
+    //                 },
+    //             ],
+    //         } as CustomResult;
+    //     } catch (error) {
+    //         return {
+    //             data: null,
+    //             statusCode: HttpStatus.InternalServerError,
+    //             statusDescription: `Unknown error inside try-catch block inside dataCommandRepository.updateCommentById: ${JSON.stringify(
+    //                 error,
+    //             )}`,
+    //             errorsMessages: [
+    //                 {
+    //                     field: "dataCommandRepository.updateCommentById", // это служебная и отладочная информация, к ней НЕ должен иметь доступ фронтенд, обрабатываем внутри периметра работы бэкэнда
+    //                     message: `Unknown error inside try-catch block: ${JSON.stringify(error)}`,
+    //                 },
+    //             ],
+    //         } as CustomResult;
+    //     }
+    // },
 
-            if (!res.acknowledged) {
-                return {
-                    data: null,
-                    statusCode: HttpStatus.InternalServerError,
-                    statusDescription: `Unknown error inside bloggersCollection.updateOne inside dataCommandRepository.updateCommentById`,
-                    errorsMessages: [
-                        {
-                            field: "bloggersCollection.updateOne inside dataCommandRepository.updateCommentById", // это служебная и отладочная информация, к ней НЕ должен иметь доступ фронтенд, обрабатываем внутри периметра работы бэкэнда
-                            message: `Unknown error while trying to update comment`,
-                        },
-                    ],
-                } as CustomResult;
-            }
-
-            return {
-                data: null,
-                statusCode: HttpStatus.NoContent,
-                statusDescription: "",
-                errorsMessages: [
-                    {
-                        field: "",
-                        message: "",
-                    },
-                ],
-            } as CustomResult;
-        } catch (error) {
-            return {
-                data: null,
-                statusCode: HttpStatus.InternalServerError,
-                statusDescription: `Unknown error inside try-catch block inside dataCommandRepository.updateCommentById: ${JSON.stringify(
-                    error,
-                )}`,
-                errorsMessages: [
-                    {
-                        field: "dataCommandRepository.updateCommentById", // это служебная и отладочная информация, к ней НЕ должен иметь доступ фронтенд, обрабатываем внутри периметра работы бэкэнда
-                        message: `Unknown error inside try-catch block: ${JSON.stringify(error)}`,
-                    },
-                ],
-            } as CustomResult;
-        }
-    },
-
-    async deleteCommentById(
-        sentCommentId: string,
-        sentUserId: string,
-    ): Promise<CustomResult> {
-        try {
-            const comment = await findCommentByPrimaryKey(
-                new ObjectId(sentCommentId),
-            );
-
-            if (!comment) {
-                return {
-                    data: null,
-                    statusCode: HttpStatus.InternalServerError,
-                    statusDescription: `Comment is not found by sent comment ID ${sentCommentId} inside dataCommandRepository.deleteCommentById. Even though this exact ID passed existence check in middlewares previously.`,
-                    errorsMessages: [
-                        {
-                            field: "if (!comment) inside dataCommandRepository.deleteCommentById", // это служебная и отладочная информация, к ней НЕ должен иметь доступ фронтенд, обрабатываем внутри периметра работы бэкэнда
-                            message: `Internal Server Error`,
-                        },
-                    ],
-                };
-            }
-
-            if (sentUserId !== comment.commentatorInfo.userId) {
-                return {
-                    data: null,
-                    statusCode: HttpStatus.Forbidden,
-                    statusDescription: `User is forbidden to delete another user’s comment`,
-                    errorsMessages: [
-                        {
-                            field: "if (sentUserId !== comment.commentatorInfo.userId) inside dataCommandRepository.deleteCommentById", // это служебная и отладочная информация, к ней НЕ должен иметь доступ фронтенд, обрабатываем внутри периметра работы бэкэнда
-                            message: `User is forbidden to delete another user’s comment`,
-                        },
-                    ],
-                };
-            }
-
-            const res = await commentsCollection.deleteOne({
-                _id: new ObjectId(sentCommentId),
-            });
-
-            if (!res.acknowledged) {
-                return {
-                    data: null,
-                    statusCode: HttpStatus.InternalServerError,
-                    statusDescription: `Unknown error inside bloggersCollection.deleteOne inside dataCommandRepository.deleteCommentById`,
-                    errorsMessages: [
-                        {
-                            field: "bloggersCollection.deleteOne inside dataCommandRepository.deleteCommentById", // это служебная и отладочная информация, к ней НЕ должен иметь доступ фронтенд, обрабатываем внутри периметра работы бэкэнда
-                            message: `Unknown error while trying to delete comment`,
-                        },
-                    ],
-                };
-            }
-
-            return {
-                data: null,
-                statusCode: HttpStatus.NoContent,
-                statusDescription: "",
-                errorsMessages: [
-                    {
-                        field: "",
-                        message: "",
-                    },
-                ],
-            };
-        } catch (error) {
-            return {
-                data: null,
-                statusCode: HttpStatus.InternalServerError,
-                statusDescription: `Unknown error inside try-catch block inside dataCommandRepository.deleteCommentById: ${JSON.stringify(
-                    error,
-                )}`,
-                errorsMessages: [
-                    {
-                        field: "dataCommandRepository.deleteCommentById", // это служебная и отладочная информация, к ней НЕ должен иметь доступ фронтенд, обрабатываем внутри периметра работы бэкэнда
-                        message: `Unknown error inside try-catch block: ${JSON.stringify(error)}`,
-                    },
-                ],
-            };
-        }
-    },
+    // async deleteCommentById(
+    //     sentCommentId: string,
+    //     sentUserId: string,
+    // ): Promise<CustomResult> {
+    //     try {
+    //         const comment = await findCommentByPrimaryKey(
+    //             new ObjectId(sentCommentId),
+    //         );
+    //
+    //         if (!comment) {
+    //             return {
+    //                 data: null,
+    //                 statusCode: HttpStatus.InternalServerError,
+    //                 statusDescription: `Comment is not found by sent comment ID ${sentCommentId} inside dataCommandRepository.deleteCommentById. Even though this exact ID passed existence check in middlewares previously.`,
+    //                 errorsMessages: [
+    //                     {
+    //                         field: "if (!comment) inside dataCommandRepository.deleteCommentById", // это служебная и отладочная информация, к ней НЕ должен иметь доступ фронтенд, обрабатываем внутри периметра работы бэкэнда
+    //                         message: `Internal Server Error`,
+    //                     },
+    //                 ],
+    //             };
+    //         }
+    //
+    //         if (sentUserId !== comment.commentatorInfo.userId) {
+    //             return {
+    //                 data: null,
+    //                 statusCode: HttpStatus.Forbidden,
+    //                 statusDescription: `User is forbidden to delete another user’s comment`,
+    //                 errorsMessages: [
+    //                     {
+    //                         field: "if (sentUserId !== comment.commentatorInfo.userId) inside dataCommandRepository.deleteCommentById", // это служебная и отладочная информация, к ней НЕ должен иметь доступ фронтенд, обрабатываем внутри периметра работы бэкэнда
+    //                         message: `User is forbidden to delete another user’s comment`,
+    //                     },
+    //                 ],
+    //             };
+    //         }
+    //
+    //         const res = await commentsCollection.deleteOne({
+    //             _id: new ObjectId(sentCommentId),
+    //         });
+    //
+    //         if (!res.acknowledged) {
+    //             return {
+    //                 data: null,
+    //                 statusCode: HttpStatus.InternalServerError,
+    //                 statusDescription: `Unknown error inside bloggersCollection.deleteOne inside dataCommandRepository.deleteCommentById`,
+    //                 errorsMessages: [
+    //                     {
+    //                         field: "bloggersCollection.deleteOne inside dataCommandRepository.deleteCommentById", // это служебная и отладочная информация, к ней НЕ должен иметь доступ фронтенд, обрабатываем внутри периметра работы бэкэнда
+    //                         message: `Unknown error while trying to delete comment`,
+    //                     },
+    //                 ],
+    //             };
+    //         }
+    //
+    //         return {
+    //             data: null,
+    //             statusCode: HttpStatus.NoContent,
+    //             statusDescription: "",
+    //             errorsMessages: [
+    //                 {
+    //                     field: "",
+    //                     message: "",
+    //                 },
+    //             ],
+    //         };
+    //     } catch (error) {
+    //         return {
+    //             data: null,
+    //             statusCode: HttpStatus.InternalServerError,
+    //             statusDescription: `Unknown error inside try-catch block inside dataCommandRepository.deleteCommentById: ${JSON.stringify(
+    //                 error,
+    //             )}`,
+    //             errorsMessages: [
+    //                 {
+    //                     field: "dataCommandRepository.deleteCommentById", // это служебная и отладочная информация, к ней НЕ должен иметь доступ фронтенд, обрабатываем внутри периметра работы бэкэнда
+    //                     message: `Unknown error inside try-catch block: ${JSON.stringify(error)}`,
+    //                 },
+    //             ],
+    //         };
+    //     }
+    // },
 
     // *****************************
     // методы для управления регистрацией новых пользователей

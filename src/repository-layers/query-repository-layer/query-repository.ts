@@ -101,21 +101,21 @@ export const dataQueryRepository = {
         });
     },
 
-    async findSingleComment(
-        commentId: string,
-    ): Promise<CommentViewModel | undefined> {
-        if (ObjectId.isValid(commentId)) {
-            const comment = await findCommentByPrimaryKey(
-                new ObjectId(commentId),
-            );
-
-            if (comment) {
-                return mapSingleCommentToViewModel(comment);
-            }
-        }
-
-        return undefined;
-    },
+    // async findSingleComment(
+    //     commentId: string,
+    // ): Promise<CommentViewModel | undefined> {
+    //     if (ObjectId.isValid(commentId)) {
+    //         const comment = await findCommentByPrimaryKey(
+    //             new ObjectId(commentId),
+    //         );
+    //
+    //         if (comment) {
+    //             return mapSingleCommentToViewModel(comment);
+    //         }
+    //     }
+    //
+    //     return undefined;
+    // },
     // *****************************
     // методы для управления блогами
     // *****************************
