@@ -8,12 +8,16 @@ import { HttpStatus } from "../common/http-statuses/http-statuses";
 import { CommentDocument } from "../db/mongoose-comment-collection-model";
 import { CommentViewModel } from "../routers/router-types/comment-view-model";
 import { LikeStatus } from "../routers/router-types/comment-like-storage-model";
+import { LikesCommandRepository } from "../repository-layers/command-repository-layer/likes-command-repository";
+import { LikeDocument, LikeModel } from "../db/mongoose-like-collection-model";
 
 @injectable()
 export class CommentsCommandService {
     constructor(
         @inject(TYPES.CommentsCommandRepository)
         protected commentsCommandRepository: CommentsCommandRepository,
+        @inject(TYPES.LikesCommandRepository)
+        protected likesCommandRepository: LikesCommandRepository,
     ) {}
 
     async updateCommentById(
@@ -125,13 +129,47 @@ export class CommentsCommandService {
         sentCommentId: string,
         sentUserId: string,
         sentLike: LikeStatus,
-    ):Promise<CustomResult>
-    {
-        извлечь информацию о том, лайкал ли пользователь коммент с указанным айди
-        если не лайкал то применить то что передано в лайкстатусе
-        если лайкал изменить информацию о статуслайке коммента, если по логике это допустимо
-        добавить-изменить информацию в базе лайков
-        изменить информацию в базе комментов
+    ): Promise<CustomResult> {
+        const previousReactionResult =
+            await this.likesCommandRepository.checkIfUserAlreadyReacted(
+                sentUserId,
+                sentCommentId,
+            );
+
+        // если прежней реакции не найдено и новая реакция не None
+        if (previousReactionResult === null && sentLike !== "None") {
+            const newLikeDocument: LikeDocument = await LikeModel.create({
+                commentId: sentCommentId,
+                userId: sentUserId,
+                likeStatus: sentLike,
+            });
+
+            const ifSavingLikeSuccessful = await this.likesCommandRepository.saveLikeDocument(newLikeDocument);
+
+            if(!ifSavingLikeSuccessful){
+                return error;
+
+            }
+            здесь добавление результата в репозиторий коммента (три метода будет у коммента - addReaction, changeReaction и nullifyReaction, в этой части будет первый)
+            return {
+                data: null,
+                statusCode: HttpStatus.NoContent,
+                statusDescription: "",
+                errorsMessages: [
+                    {
+                        field: "",
+                        message: ""
+                    }
+                ]
+            };
+        }
+        // если прежняя реакция найдена и она не равна вновь переданной
+        else if(previousReactionResult !== null && previousReactionResult.likeStatus !== sentLike) {
+
+            дополнительное условие - если передали лайк = none - удалить запись из лайк репозитория, вызвать nullifyReaction
+
+            вызывать changeReaction - если не none, не забыть поменять лайк в репозитории лайков
+        }
 
     }
 }

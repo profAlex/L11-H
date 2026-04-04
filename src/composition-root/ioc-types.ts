@@ -7,6 +7,7 @@ export const TYPES = {
     SecurityDevicesCommandService: Symbol.for("SecurityDevicesCommandService"),
     CommentsQueryService: Symbol.for("CommentsQueryService"),
     CommentsCommandService: Symbol.for("CommentsCommandService"),
+    LikesCommandRepository: Symbol.for("LikesCommandService"),
 
     // Repositories
     SessionsCommandRepository: Symbol.for("SessionsCommandRepository"),
