@@ -14,36 +14,37 @@ import { UsersQueryService } from "../service-layer(BLL)/users-query-service";
 import { SecurityDevicesHandler } from "../routers/router-handlers/security-devices-router-description";
 import { SecurityDevicesCommandService } from "../service-layer(BLL)/security-devices-command-service";
 import { RefreshTokenGuard } from "../routers/guard-middleware/refresh-token-guard";
+import { CommentsHandler } from "../routers/router-handlers/comment-router-description";
 
 // export const authService = new AuthCommandService(
 //     new UsersQueryRepository(),
 //     new SessionsCommandRepository(),
 //     new BcryptService(),
 // );
-
-export const bcryptService = new BcryptService();
-
-export const sessionsCommandRepository = new SessionsCommandRepository();
-export const usersQueryRepository = new UsersQueryRepository();
-export const usersCommandRepository = new UsersCommandRepository(bcryptService);
-
-export const authService = new AuthCommandService(
-    usersCommandRepository,
-    usersQueryRepository,
-    sessionsCommandRepository,
-    bcryptService
-);
-
-export const usersCommandService = new UsersCommandService(usersCommandRepository);
-export const usersQueryService = new UsersQueryService(usersQueryRepository);
-
-export const securityDevicesCommandService = new SecurityDevicesCommandService(sessionsCommandRepository);
-
-export const refreshTokenGuardInstance = new RefreshTokenGuard(sessionsCommandRepository);
-
-export const usersHandler = new UsersHandler(usersCommandService, usersQueryService);
-export const securityDevicesHandler = new SecurityDevicesHandler(securityDevicesCommandService);
-export const authHandler = new AuthHandler(authService);
+//
+// export const bcryptService = new BcryptService();
+//
+// export const sessionsCommandRepository = new SessionsCommandRepository();
+// export const usersQueryRepository = new UsersQueryRepository();
+// export const usersCommandRepository = new UsersCommandRepository(bcryptService);
+//
+// export const authService = new AuthCommandService(
+//     usersCommandRepository,
+//     usersQueryRepository,
+//     sessionsCommandRepository,
+//     bcryptService
+// );
+//
+// export const usersCommandService = new UsersCommandService(usersCommandRepository);
+// export const usersQueryService = new UsersQueryService(usersQueryRepository);
+//
+// export const securityDevicesCommandService = new SecurityDevicesCommandService(sessionsCommandRepository);
+//
+// export const refreshTokenGuardInstance = new RefreshTokenGuard(sessionsCommandRepository);
+//
+// export const usersHandler = new UsersHandler(usersCommandService, usersQueryService);
+// export const securityDevicesHandler = new SecurityDevicesHandler(securityDevicesCommandService);
+// export const authHandler = new AuthHandler(authService);
 
 
 const container = new Container();
@@ -55,6 +56,7 @@ container.bind(TYPES.RefreshTokenGuard).to(RefreshTokenGuard).inSingletonScope()
 container.bind(TYPES.UsersHandler).to(UsersHandler).inSingletonScope();
 container.bind(TYPES.SecurityDevicesHandler).to(SecurityDevicesHandler).inSingletonScope();
 container.bind(TYPES.AuthHandler).to(AuthHandler).inSingletonScope();
+container.bind(TYPES.CommentsHandler).to(CommentsHandler).inSingletonScope();
 
 // сервисы
 container.bind(TYPES.BcryptService).to(BcryptService).inSingletonScope();

@@ -1,4 +1,3 @@
-import "reflect-metadata";
 import { inject, injectable } from "inversify";
 import { TYPES } from "../../composition-root/ioc-types";
 
@@ -22,7 +21,7 @@ import {
 @injectable()
 export class UsersCommandRepository {
 
-    constructor(@inject("BcryptService") protected bcryptService:BcryptService) {}
+    constructor(@inject(TYPES.BcryptService) protected bcryptService:BcryptService) {}
 
     async createNewUser(
         sentNewUser: UserInputModel,

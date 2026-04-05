@@ -1,4 +1,3 @@
-import "reflect-metadata";
 import { inject, injectable } from "inversify";
 
 
@@ -11,6 +10,7 @@ import { mapToUsersListPaginatedOutput } from "../mappers/map-paginated-user-sea
 import { UserViewModel } from "../../routers/router-types/user-view-model";
 import { mapSingleUserCollectionToViewModel } from "../mappers/map-to-UserViewModel";
 
+@injectable()
 export class UsersQueryRepository {
 
     async getSeveralUsers(

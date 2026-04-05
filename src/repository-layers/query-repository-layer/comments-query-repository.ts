@@ -1,4 +1,3 @@
-import "reflect-metadata";
 import { inject, injectable } from "inversify";
 import { mapSingleCommentToViewModel } from "../mappers/map-to-CommentViewModel";
 import { CommentViewModel } from "../../routers/router-types/comment-view-model";

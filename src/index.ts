@@ -1,4 +1,5 @@
 import "reflect-metadata";
+import { container } from "./composition-root/composition-root"; // Сначала грузим контейнер
 import { setupApp } from "./setup-app";
 import { closeDB, runDB } from "./db/mongo.db";
 import { envConfig } from "./config";

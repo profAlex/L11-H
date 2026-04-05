@@ -1,4 +1,3 @@
-import "reflect-metadata";
 import { inject, injectable } from "inversify";
 import { LikeDocument, LikeModel } from "../../db/mongoose-like-collection-model";
 

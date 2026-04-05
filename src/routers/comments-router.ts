@@ -1,4 +1,4 @@
-import { Router } from "express";
+import { Router, Request, Response } from "express";
 import { IdParamName } from "./util-enums/id-names";
 import { createIdValidator } from "./validation-middleware/id-verification-and-validation";
 import { CollectionNames } from "../db/collection-names";
@@ -9,6 +9,9 @@ import { likeStatusInputModelValidation } from "./validation-middleware/comment-
 import { container } from "../composition-root/composition-root";
 import { TYPES } from "../composition-root/ioc-types";
 import { CommentsHandler } from "./router-handlers/comment-router-description";
+import { RequestWithParams, RequestWithParamsAndBody } from "./request-types/request-types";
+import { CommentInputModel } from "./router-types/comment-input-model";
+import { LikeInputModel } from "./router-types/comments-like-input-model";
 
 export const commentsRouter = Router();
 
@@ -17,15 +20,16 @@ const validateParameterCommentId = createIdValidator(
     CollectionNames.Comments,
 );
 
-const commentsHandler = container.get<CommentsHandler>(TYPES.UsersHandler);
+// Функция-помощник, чтобы не писать container.get в каждом методе,
+// но при этом доставать хэндлер только в момент вызова (Lazy Load)
+const getHandler = () => container.get<CommentsHandler>(TYPES.CommentsHandler);
 
 // Return comment by id
 commentsRouter.get(
     `/:${IdParamName.CommentId}`,
     validateParameterCommentId,
-    //commentInputModelValidation,
     inputErrorManagementMiddleware,
-    commentsHandler.getCommentById,
+    (req:  RequestWithParams<{commentId: string}>, res: Response) => getHandler().getCommentById(req, res)
 );
 
 // Update existing comment by id with InputModel
@@ -35,7 +39,10 @@ commentsRouter.put(
     validateParameterCommentId,
     commentInputModelValidation,
     inputErrorManagementMiddleware,
-    commentsHandler.updateCommentById,
+    (req: RequestWithParamsAndBody<
+        { [IdParamName.CommentId]: string },
+        CommentInputModel
+    >, res: Response) => getHandler().updateCommentById(req, res)
 );
 
 // Delete comment specified by id
@@ -43,7 +50,7 @@ commentsRouter.delete(
     `/:${IdParamName.CommentId}`,
     accessTokenGuard,
     validateParameterCommentId,
-    commentsHandler.deleteCommentById,
+    (req: RequestWithParams<{ [IdParamName.CommentId]: string }>, res: Response) => getHandler().deleteCommentById(req, res)
 );
 
 // Make like/unlike/dislike/undislike operation
@@ -53,5 +60,8 @@ commentsRouter.put(
     validateParameterCommentId,
     likeStatusInputModelValidation,
     inputErrorManagementMiddleware,
-    commentsHandler.likeCommentById,
+    (req: RequestWithParamsAndBody<
+        { [IdParamName.CommentId]: string },
+        LikeInputModel
+    >, res: Response) => getHandler().likeCommentById(req, res)
 );

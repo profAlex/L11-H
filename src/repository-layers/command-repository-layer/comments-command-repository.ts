@@ -1,4 +1,3 @@
-import "reflect-metadata";
 import { inject, injectable } from "inversify";
 import { ObjectId } from "mongodb";
 import { CommentStorageModel } from "../../routers/router-types/comment-storage-model";
