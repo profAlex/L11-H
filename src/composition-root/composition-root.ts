@@ -15,6 +15,12 @@ import { SecurityDevicesHandler } from "../routers/router-handlers/security-devi
 import { SecurityDevicesCommandService } from "../service-layer(BLL)/security-devices-command-service";
 import { RefreshTokenGuard } from "../routers/guard-middleware/refresh-token-guard";
 import { CommentsHandler } from "../routers/router-handlers/comment-router-description";
+import { CommentsQueryService } from "../service-layer(BLL)/comments-query-service";
+import { CommentsQueryRepository } from "../repository-layers/query-repository-layer/comments-query-repository";
+import { LikesQueryRepository } from "../repository-layers/query-repository-layer/likes-query-repository";
+import { CommentsCommandService } from "../service-layer(BLL)/comments-command-service";
+import { CommentsCommandRepository } from "../repository-layers/command-repository-layer/comments-command-repository";
+import { LikesCommandRepository } from "../repository-layers/command-repository-layer/likes-command-repository";
 
 // export const authService = new AuthCommandService(
 //     new UsersQueryRepository(),
@@ -64,10 +70,17 @@ container.bind(TYPES.AuthCommandService).to(AuthCommandService).inSingletonScope
 container.bind(TYPES.UsersCommandService).to(UsersCommandService).inSingletonScope();
 container.bind(TYPES.UsersQueryService).to(UsersQueryService).inSingletonScope();
 container.bind(TYPES.SecurityDevicesCommandService).to(SecurityDevicesCommandService).inSingletonScope();
+container.bind(TYPES.CommentsQueryService).to(CommentsQueryService).inSingletonScope();
+container.bind(TYPES.CommentsCommandService).to(CommentsCommandService).inSingletonScope();
 
 // для репозиториев
 container.bind(TYPES.SessionsCommandRepository).to(SessionsCommandRepository).inSingletonScope();
 container.bind(TYPES.UsersQueryRepository).to(UsersQueryRepository).inSingletonScope();
 container.bind(TYPES.UsersCommandRepository).to(UsersCommandRepository).inSingletonScope();
+container.bind(TYPES.CommentsQueryRepository).to(CommentsQueryRepository).inSingletonScope();
+container.bind(TYPES.CommentsCommandRepository).to(CommentsCommandRepository).inSingletonScope();
+container.bind(TYPES.LikesQueryRepository).to(LikesQueryRepository).inSingletonScope();
+container.bind(TYPES.LikesCommandRepository).to(LikesCommandRepository).inSingletonScope();
+
 
 export { container };
