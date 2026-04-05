@@ -1,5 +1,6 @@
 import "reflect-metadata";
 import { inject, injectable } from "inversify";
+import { TYPES } from "../composition-root/ioc-types";
 
 
 import { Response } from "express";
@@ -29,7 +30,6 @@ import { SessionsCommandRepository } from "../repository-layers/command-reposito
 import { PasswordRecoveryInputModel } from "../routers/router-types/auth-password-recovery-input-model";
 import { NewPasswordRecoveryInputModel } from "../routers/router-types/auth-new-password-recovery-input-model";
 import { UsersCommandRepository } from "../repository-layers/command-repository-layer/users-command-repository";
-import { TYPES } from "../composition-root/ioc-types";
 import { SessionModel } from "../db/mongoose-session-collection-model";
 
 @injectable()

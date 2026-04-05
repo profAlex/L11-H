@@ -1,3 +1,4 @@
+import "reflect-metadata";
 import { setupApp } from "./setup-app";
 import { closeDB, runDB } from "./db/mongo.db";
 import { envConfig } from "./config";

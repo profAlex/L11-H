@@ -1,5 +1,6 @@
 import "reflect-metadata";
 import { Container } from "inversify";
+import { TYPES } from "./ioc-types";
 
 import { AuthHandler } from "../routers/router-handlers/auth-router-description";
 import { SessionsCommandRepository } from "../repository-layers/command-repository-layer/sessions-command-repository";
@@ -13,7 +14,6 @@ import { UsersQueryService } from "../service-layer(BLL)/users-query-service";
 import { SecurityDevicesHandler } from "../routers/router-handlers/security-devices-router-description";
 import { SecurityDevicesCommandService } from "../service-layer(BLL)/security-devices-command-service";
 import { RefreshTokenGuard } from "../routers/guard-middleware/refresh-token-guard";
-import { TYPES } from "./ioc-types";
 
 // export const authService = new AuthCommandService(
 //     new UsersQueryRepository(),

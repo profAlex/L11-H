@@ -1,6 +1,7 @@
 export const TYPES = {
     // Services
-    BcryptService: Symbol.for("BcryptService"),
+    // BcryptService: Symbol.for("BcryptService"),
+    BcryptService: "BcryptService",
     AuthCommandService: Symbol.for("AuthCommandService"),
     UsersCommandService: Symbol.for("UsersCommandService"),
     UsersQueryService: Symbol.for("UsersQueryService"),
