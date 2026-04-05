@@ -3,29 +3,35 @@ import { inject, injectable } from "inversify";
 import { TYPES } from "../composition-root/ioc-types";
 import { CommentViewModel } from "../routers/router-types/comment-view-model";
 import { CommentsQueryRepository } from "../repository-layers/query-repository-layer/comments-query-repository";
+import { LikesQueryRepository } from "../repository-layers/query-repository-layer/likes-query-repository";
+import { LikeDocument } from "../db/mongoose-like-collection-model";
 
 @injectable()
 export class CommentsQueryService {
 
-    constructor(@inject(TYPES.CommentsQueryRepository) protected commentsQueryRepository:CommentsQueryRepository) {
+    constructor(@inject(TYPES.CommentsQueryRepository) protected commentsQueryRepository:CommentsQueryRepository,
+                @inject(TYPES.LikesQueryRepository) protected likesQueryRepository:LikesQueryRepository,) {
     }
 
-    async findSingleComment(sentCommentId: string): Promise<CommentViewModel | undefined> {
+    async findSingleComment(sentCommentId: string, sentUserId:string): Promise<CommentViewModel | undefined> {
 
-        const foundComment = await this.commentsQueryRepository.findSingleComment(sentCommentId);;
+        const foundComment = await this.commentsQueryRepository.findSingleComment(sentCommentId);
 
         if(!foundComment) {
             return undefined;
         }
 
-        if(здесь вызов функции)
-        // TODO - здесь нужен метод commentsQueryService по поиску в базе лайков записи о том
-        // TODO был ли от данного пользователя лайк или дизлайк
-        // TODO и если был то перезаписать поле myStatus
+        const previousReactionResult: LikeDocument | null =
+            await this.likesQueryRepository.checkIfUserAlreadyReacted(
+                sentUserId,
+                sentCommentId,
+            );
 
+        if(previousReactionResult)
+        {
+            foundComment.likesInfo.myStatus = previousReactionResult.likeStatus;
+        }
 
         return foundComment;
-
     }
-
 }

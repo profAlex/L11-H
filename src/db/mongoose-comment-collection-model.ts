@@ -37,8 +37,8 @@ const CommentatorInfoSchema = new Schema<CommentatorInfo>({
 // }
 
 const LikesInfoStorageSchema = new Schema<LikesInfoStorageModel>({
-    likesCount: { type: Number, required: true },
-    dislikesCount: { type: Number, required: true },
+    likesCount: { type: Number, required: true, default: 0, min: 0 },
+    dislikesCount: { type: Number, required: true, default: 0, min: 0 },
 });
 
 const CommentSchema = new Schema<CommentStorageModel>(

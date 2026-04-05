@@ -17,7 +17,6 @@ import { CommentsQueryService } from "../../service-layer(BLL)/comments-query-se
 import { CommentsCommandService } from "../../service-layer(BLL)/comments-command-service";
 import {
     LikeInputModel,
-    LikesInputModel,
 } from "../router-types/comments-like-input-model";
 
 @injectable()
@@ -33,8 +32,22 @@ export class CommentsHandler {
         req: RequestWithParams<{ [IdParamName.CommentId]: string }>,
         res: Response,
     ) => {
+        if (!req.user || !req.user.userId) {
+            console.error({
+                message:
+                    "Required parameter is missing: 'req.user or req.user.userId' inside updateCommentById handler",
+                field: "'if (!req.user || !req.user.userId)' check failed",
+            });
+
+            return res.status(HttpStatus.InternalServerError).json({
+                message: "Internal server error",
+                field: "",
+            });
+        }
+
         const result = await this.commentsQueryService.findSingleComment(
             req.params[IdParamName.CommentId],
+            req.user.userId
         );
 
         if (!result) {

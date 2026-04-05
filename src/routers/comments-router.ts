@@ -1,18 +1,14 @@
-
-
 import { Router } from "express";
 import { IdParamName } from "./util-enums/id-names";
 import { createIdValidator } from "./validation-middleware/id-verification-and-validation";
 import { CollectionNames } from "../db/collection-names";
 import { inputErrorManagementMiddleware } from "./validation-middleware/error-management-validation-middleware";
 import { commentInputModelValidation } from "./validation-middleware/comment-input-model-validation";
-// import {
-//     deleteCommentById,
-//     getCommentById,
-//     updateCommentById,
-// } from "./router-handlers/comment-router-description";
 import { accessTokenGuard } from "./guard-middleware/access-token-guard";
 import { likeStatusInputModelValidation } from "./validation-middleware/comment-like-input-model-validation";
+import { container } from "../composition-root/composition-root";
+import { TYPES } from "../composition-root/ioc-types";
+import { CommentsHandler } from "./router-handlers/comment-router-description";
 
 export const commentsRouter = Router();
 
@@ -21,13 +17,15 @@ const validateParameterCommentId = createIdValidator(
     CollectionNames.Comments,
 );
 
+const commentsHandler = container.get<CommentsHandler>(TYPES.UsersHandler);
+
 // Return comment by id
 commentsRouter.get(
     `/:${IdParamName.CommentId}`,
     validateParameterCommentId,
     //commentInputModelValidation,
     inputErrorManagementMiddleware,
-    getCommentById,
+    commentsHandler.getCommentById,
 );
 
 // Update existing comment by id with InputModel
@@ -37,7 +35,7 @@ commentsRouter.put(
     validateParameterCommentId,
     commentInputModelValidation,
     inputErrorManagementMiddleware,
-    updateCommentById,
+    commentsHandler.updateCommentById,
 );
 
 // Delete comment specified by id
@@ -45,7 +43,7 @@ commentsRouter.delete(
     `/:${IdParamName.CommentId}`,
     accessTokenGuard,
     validateParameterCommentId,
-    deleteCommentById,
+    commentsHandler.deleteCommentById,
 );
 
 // Make like/unlike/dislike/undislike operation
@@ -55,6 +53,5 @@ commentsRouter.put(
     validateParameterCommentId,
     likeStatusInputModelValidation,
     inputErrorManagementMiddleware,
-    likeCommentById,
-    // commentsHandler.,
+    commentsHandler.likeCommentById,
 );

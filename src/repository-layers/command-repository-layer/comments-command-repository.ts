@@ -8,6 +8,7 @@ import { CustomResult } from "../../common/result-type/result-type";
 import { HttpStatus } from "../../common/http-statuses/http-statuses";
 import { CommentDocument } from "../../db/mongoose-comment-collection-model";
 import { CommentViewModel } from "../../routers/router-types/comment-view-model";
+import { LikeStatus } from "../../routers/router-types/comment-like-storage-model";
 
 @injectable()
 export class CommentsCommandRepository {
@@ -21,16 +22,16 @@ export class CommentsCommandRepository {
         return CommentModel.findById(id);
     }
 
-    async findCommentByPrimaryKeyLean(id: string): Promise<CommentViewModel | null> {
+    async findCommentByPrimaryKeyLean(
+        id: string,
+    ): Promise<CommentViewModel | null> {
         return CommentModel.findById(id).lean();
     }
 
     async updateCommentById(
-        sentComment: CommentDocument
+        sentComment: CommentDocument,
     ): Promise<CustomResult> {
         try {
-            // Просто сохраняем. Если база не ответит или будет ошибка,
-            // мы автоматически улетим в блок catch.
             await sentComment.save();
 
             // Если мы дошли до этой строки, значит сохранение прошло успешно.
@@ -41,12 +42,11 @@ export class CommentsCommandRepository {
                 errorsMessages: [
                     {
                         field: "",
-                        message: ""
-                    }
-                ]
+                        message: "",
+                    },
+                ],
             };
         } catch (error) {
-            // Все ошибки (база недоступна, ошибка валидации схемы и т.д.) обрабатываются здесь
             return {
                 data: null,
                 statusCode: HttpStatus.InternalServerError,
@@ -54,9 +54,9 @@ export class CommentsCommandRepository {
                 errorsMessages: [
                     {
                         field: "sentComment.save()",
-                        message: `Unknown error while trying to update comment via save()`
-                    }
-                ]
+                        message: `Unknown error while trying to update comment via save()`,
+                    },
+                ],
             };
         }
     }
@@ -65,14 +65,19 @@ export class CommentsCommandRepository {
         try {
             const result = await CommentModel.deleteOne({ _id: sentId as any });
 
-            if (!result.acknowledged)
-            {
+            if (!result.acknowledged) {
                 return {
                     data: null,
                     statusCode: HttpStatus.InternalServerError,
-                    statusDescription: "Database failed to acknowledge deletion inside CommentsCommandRepository.deleteById",
-                    errorsMessages: [{ field: "CommentsCommandRepository.deleteById", message: "Deletion not acknowledged" }]
-                }
+                    statusDescription:
+                        "Database failed to acknowledge deletion inside CommentsCommandRepository.deleteById",
+                    errorsMessages: [
+                        {
+                            field: "CommentsCommandRepository.deleteById",
+                            message: "Deletion not acknowledged",
+                        },
+                    ],
+                };
             }
             return {
                 data: null,
@@ -81,11 +86,10 @@ export class CommentsCommandRepository {
                 errorsMessages: [
                     {
                         field: "",
-                        message: ""
-                    }
-                ]
+                        message: "",
+                    },
+                ],
             };
-
         } catch (error) {
             return {
                 data: null,
@@ -95,10 +99,135 @@ export class CommentsCommandRepository {
                 errorsMessages: [
                     {
                         field: "CommentsCommandRepository.deleteById", // это служебная и отладочная информация, к ней НЕ должен иметь доступ фронтенд, обрабатываем внутри периметра работы бэкэнда
-                        message: `Unknown error while trying to delete comment`
-                    }
-                ]
+                        message: `Unknown error while trying to delete comment`,
+                    },
+                ],
             };
+        }
+    }
+
+    async switchCommentReaction(
+        sentCommentId: string,
+        newStatus: LikeStatus,
+    ): Promise<boolean> {
+        try {
+            // это не нужно, т.к. updateOne сам найдет и обновит, дополнительно это делать и проверять - лишняя операция
+            // const comment: CommentDocument | null =
+            //     await CommentModel.findById(sentCommentId);
+            //
+            // if (!comment) {
+            //     console.error(
+            //         `Couldn't find comment with id: ${sentCommentId} inside CommentsCommandRepository.switchCommentReaction`,
+            //     );
+            //
+            //     return false;
+            // }
+
+            // Определяем, что прибавляем, а что отнимаем
+            const isEnablingLike = newStatus === LikeStatus.Like;
+
+            // Нужно убедиться, что dislikesCount > 0 перед вычитанием.
+            const filter: any = { _id: sentCommentId };
+
+            if (isEnablingLike) {
+                filter["likesInfo.dislikesCount"] = { $gt: 0 };
+            } else {
+                filter["likesInfo.likesCount"] = { $gt: 0 };
+            }
+
+            const updateQuery = isEnablingLike
+                ? { "likesInfo.likesCount": 1, "likesInfo.dislikesCount": -1 }
+                : { "likesInfo.likesCount": -1, "likesInfo.dislikesCount": 1 };
+
+            // используем атомарный updateOne вместо save(), чтобы избежать состояния гонки
+            const result = await CommentModel.updateOne(filter, {
+                $inc: updateQuery,
+            });
+
+            // result.matchedCount > 0 означает, что комментарий найден и обновлен
+            if (result.matchedCount === 0) {
+                console.error(
+                    `Couldn't find comment with id: ${sentCommentId} inside CommentsCommandRepository.switchCommentReaction`,
+                );
+
+                return false;
+            }
+
+            return true;
+        } catch (error) {
+            console.error(
+                `Error saving comment reaction inside CommentsCommandRepository.switchCommentReaction: ${error instanceof Error ? error.message : "Unknown error"}`,
+            );
+
+            return false;
+        }
+    }
+
+    async addCommentReaction(
+        sentCommentId: string,
+        newStatus: LikeStatus
+    ): Promise<boolean> {
+        try {
+            const updateQuery = newStatus === LikeStatus.Like
+                ? { 'likesInfo.likesCount': 1 }
+                : { 'likesInfo.dislikesCount': 1 };
+
+            // атомарный апдейт для избегания состояния гонки
+            const result = await CommentModel.updateOne(
+                { _id: sentCommentId as any },
+                { $inc: updateQuery }
+            );
+
+            // если matchedCount === 0, значит комментария с таким ID нет в базе
+            if (result.matchedCount === 0) {
+                console.error(`Couldn't find comment with id: ${sentCommentId} inside CommentsCommandRepository.addReaction`);
+                return false;
+            }
+
+            return true;
+        } catch (error) {
+            console.error(
+                ` Error inside CommentsCommandRepository.addReaction: ${error instanceof Error ? error.message : "Unknown error"}`
+            );
+            return false;
+        }
+    }
+
+
+    async nullifyingCommentReaction(
+        sentCommentId: string,
+        oldStatus: LikeStatus,
+    ): Promise<boolean> {
+        try {
+            const fieldToDecrement = oldStatus === LikeStatus.Like
+                ? 'likesInfo.likesCount'
+                : 'likesInfo.dislikesCount';
+
+            // 2. Создаем фильтр: ищем по ID И проверяем, что в поле больше 0
+            const filter: any = {
+                _id: sentCommentId,
+                [fieldToDecrement]: { $gt: 0 } // Защита от ухода в минус
+            };
+
+            // 3. Выполняем атомарное уменьшение
+            const result = await CommentModel.updateOne(
+                filter,
+                { $inc: { [fieldToDecrement]: -1 } }
+            );
+
+            if (result.matchedCount === 0) {
+                console.error(`Couldn't find comment with id: ${sentCommentId} inside CommentsCommandRepository.nullifyingCommentReaction`);
+
+                return false;
+            }
+
+            return true;
+        } catch (error) {
+            console.error(
+                `Error inside CommentsCommandRepository.nullifyingCommentReaction: ${error instanceof Error ? error.message : "Unknown error"}`,
+            );
+
+            return false;
         }
     }
 }

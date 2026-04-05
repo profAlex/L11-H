@@ -98,7 +98,7 @@ export class CommentsCommandService {
                     statusDescription: `User is forbidden to delete another user’s comment`,
                     errorsMessages: [
                         {
-                            field: "if (sentUserId !== comment.commentatorInfo.userId) inside dataCommandRepository.deleteCommentById", // это служебная и отладочная информация, к ней НЕ должен иметь доступ фронтенд, обрабатываем внутри периметра работы бэкэнда
+                            field: "if (sentUserId !== comment.commentatorInfo.userId) inside dataCommandRepository.deleteCommentById",
                             message: `User is forbidden to delete another user’s comment`,
                         },
                     ],
@@ -117,7 +117,7 @@ export class CommentsCommandService {
                 )}`,
                 errorsMessages: [
                     {
-                        field: "CommentsCommandService.deleteCommentById", // это служебная и отладочная информация, к ней НЕ должен иметь доступ фронтенд, обрабатываем внутри периметра работы бэкэнда
+                        field: "CommentsCommandService.deleteCommentById",
                         message: `Unknown error inside try-catch block: ${JSON.stringify(error)}`,
                     },
                 ],
@@ -130,7 +130,7 @@ export class CommentsCommandService {
         sentUserId: string,
         sentLike: LikeStatus,
     ): Promise<CustomResult> {
-        const previousReactionResult =
+        const previousReactionResult: LikeDocument | null =
             await this.likesCommandRepository.checkIfUserAlreadyReacted(
                 sentUserId,
                 sentCommentId,
@@ -144,32 +144,157 @@ export class CommentsCommandService {
                 likeStatus: sentLike,
             });
 
-            const ifSavingLikeSuccessful = await this.likesCommandRepository.saveLikeDocument(newLikeDocument);
+            const ifSavingLikeSuccessful =
+                await this.likesCommandRepository.saveLikeDocument(
+                    newLikeDocument,
+                );
 
-            if(!ifSavingLikeSuccessful){
-                return error;
-
+            if (!ifSavingLikeSuccessful) {
+                return {
+                    data: null,
+                    statusCode: HttpStatus.InternalServerError,
+                    statusDescription: `Saving like was not successfull for comment ${sentCommentId} inside CommentsCommandService.likeCommentById.`,
+                    errorsMessages: [
+                        {
+                            field: "if(!ifSavingLikeSuccessful) inside CommentsCommandService.likeCommentById",
+                            message: `Internal Server Error`,
+                        },
+                    ],
+                };
             }
-            здесь добавление результата в репозиторий коммента (три метода будет у коммента - addReaction, changeReaction и nullifyReaction, в этой части будет первый)
-            return {
-                data: null,
-                statusCode: HttpStatus.NoContent,
-                statusDescription: "",
-                errorsMessages: [
-                    {
-                        field: "",
-                        message: ""
-                    }
-                ]
-            };
+
+            // добавляем реакцию в счетчик реакций в базе комментариев
+            const ifAddReactionSuccessfull =
+                await this.commentsCommandRepository.addCommentReaction(
+                    sentCommentId,
+                    sentLike,
+                );
+
+            if (!ifAddReactionSuccessfull) {
+                return {
+                    data: null,
+                    statusCode: HttpStatus.InternalServerError,
+                    statusDescription: `Saving like was not successfull for comment ${sentCommentId} inside CommentsCommandService.likeCommentById.`,
+                    errorsMessages: [
+                        {
+                            field: "if(!ifAddReactionSuccessfull) inside CommentsCommandService.likeCommentById", // это служебная и отладочная информация, к ней НЕ должен иметь доступ фронтенд, обрабатываем внутри периметра работы бэкэнда
+                            message: `Internal Server Error`,
+                        },
+                    ],
+                };
+            }
         }
         // если прежняя реакция найдена и она не равна вновь переданной
-        else if(previousReactionResult !== null && previousReactionResult.likeStatus !== sentLike) {
+        else if (
+            previousReactionResult !== null &&
+            previousReactionResult.likeStatus !== sentLike
+        ) {
+            // дополнительное условие - если передали лайк = none - удалить запись из лайк репозитория,
+            // не забыть вызвать nullifyReaction
 
-            дополнительное условие - если передали лайк = none - удалить запись из лайк репозитория, вызвать nullifyReaction
+            // если новая реакция это None, тогда надо удалить запись лайка в репозитории лайков и сбросить реакцию в комменте
+            if (sentLike === "None") {
+                // запоминаем какая реакция была ранее проставлена юзером
+                const previousReaction: LikeStatus =
+                    previousReactionResult.likeStatus;
 
-            вызывать changeReaction - если не none, не забыть поменять лайк в репозитории лайков
+                const result = await this.likesCommandRepository.deleteLikeById(
+                    previousReactionResult,
+                );
+
+                if (!result) {
+                    return {
+                        data: null,
+                        statusCode: HttpStatus.InternalServerError,
+                        statusDescription: `deleteOne() error inside CommentsCommandRepository.likeCommentById`,
+
+                        errorsMessages: [
+                            {
+                                field: "CommentsCommandRepository.likeCommentById", // это служебная и от
+                                message:
+                                    "Unknown error inside CommentsCommandRepository.likeCommentById",
+                            },
+                        ],
+                    };
+                }
+
+                // делаем декремент счетчика лайка или дизлайка
+                const ifNullifyingReactionSuccessfull =
+                    await this.commentsCommandRepository.nullifyingCommentReaction(
+                        sentCommentId,
+                        previousReaction,
+                    );
+
+                if (!ifNullifyingReactionSuccessfull) {
+                    return {
+                        data: null,
+                        statusCode: HttpStatus.InternalServerError,
+                        statusDescription: `Saving reaction was not successfull for comment ${sentCommentId} inside CommentsCommandService.likeCommentById.`,
+                        errorsMessages: [
+                            {
+                                field: "if(!ifSavingLikeSuccessful) inside CommentsCommandService.likeCommentById", // это служебная и отладочная информация, к ней НЕ должен иметь доступ фронтенд, обрабатываем внутри периметра работы бэкэнда
+                                message: `Internal Server Error`,
+                            },
+                        ],
+                    };
+                }
+                // если мы меняем реакцию на Like или Dislike
+                else {
+                    // меняем реакцию на новую
+                    previousReactionResult.likeStatus = sentLike;
+
+                    const ifSavingLikeSuccessful =
+                        await this.likesCommandRepository.saveLikeDocument(
+                            previousReactionResult,
+                        );
+
+                    if (!ifSavingLikeSuccessful) {
+                        return {
+                            data: null,
+                            statusCode: HttpStatus.InternalServerError,
+                            statusDescription: `Saving like was not successfull for comment ${sentCommentId} inside CommentsCommandService.likeCommentById.`,
+                            errorsMessages: [
+                                {
+                                    field: "if(!ifSavingLikeSuccessful) inside CommentsCommandService.likeCommentById", // это служебная и отладочная информация, к ней НЕ должен иметь доступ фронтенд, обрабатываем внутри периметра работы бэкэнда
+                                    message: `Internal Server Error`,
+                                },
+                            ],
+                        };
+                    }
+
+                    const ifSwitchReactionSuccessfull =
+                        await this.commentsCommandRepository.switchCommentReaction(
+                            sentCommentId,
+                            sentLike,
+                        );
+
+                    if (!ifSwitchReactionSuccessfull) {
+                        return {
+                            data: null,
+                            statusCode: HttpStatus.InternalServerError,
+                            statusDescription: `Saving reaction was not successfull for comment ${sentCommentId} inside CommentsCommandService.likeCommentById.`,
+                            errorsMessages: [
+                                {
+                                    field: "if(!ifSavingLikeSuccessful) inside CommentsCommandService.likeCommentById", // это служебная и отладочная информация, к ней НЕ должен иметь доступ фронтенд, обрабатываем внутри периметра работы бэкэнда
+                                    message: `Internal Server Error`,
+                                },
+                            ],
+                        };
+                    }
+                }
+            }
         }
-
+        // реакция изменена удачно
+        return {
+            data: null,
+            statusCode: HttpStatus.NoContent,
+            statusDescription: "",
+            errorsMessages: [
+                {
+                    field: "",
+                    message: "",
+                },
+            ],
+        };
     }
 }
