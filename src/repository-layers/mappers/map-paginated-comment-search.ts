@@ -18,6 +18,7 @@ export function mapToCommentListPaginatedOutput(
                 content: comment.content,
                 commentatorInfo: { ...comment.commentatorInfo },
                 createdAt: new Date(comment.createdAt),
+                likesInfo: comment.likesInfo,
             }),
         ),
     };
