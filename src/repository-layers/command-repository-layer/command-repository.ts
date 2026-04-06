@@ -6,9 +6,9 @@ import {
     CommentModel,
     commentsCollection,
     postsCollection,
-    requestsRestrictionDataStorage,
+    requestsRestrictionDataStorage, SessionModel,
     sessionsDataStorage,
-    usersCollection,
+    usersCollection
 } from "../../db/mongo.db";
 import { ObjectId } from "mongodb";
 import { BlogPostInputModel } from "../../routers/router-types/blog-post-input-model";
@@ -21,6 +21,7 @@ import { CommentStorageModel } from "../../routers/router-types/comment-storage-
 import { SessionStorageModel } from "../../routers/router-types/auth-SessionStorageModel";
 import { RequestRestrictionStorageModel } from "../../routers/router-types/auth-RequestRestrictionStorageModel";
 import { LikeStatus } from "../../routers/router-types/comment-like-storage-model";
+import { LikeModel } from "../../db/mongoose-like-collection-model";
 
 export type BloggerCollectionStorageModel = {
     _id: ObjectId;
@@ -1662,11 +1663,24 @@ export const dataCommandRepository = {
     // методы для тестов
     // *****************************
     async deleteAllBloggers() {
-        await bloggersCollection.deleteMany({});
-        await postsCollection.deleteMany({});
-        await usersCollection.deleteMany({});
-        await commentsCollection.deleteMany({});
-        await sessionsDataStorage.deleteMany({});
-        await requestsRestrictionDataStorage.deleteMany({});
+        // await bloggersCollection.deleteMany({});
+        // await postsCollection.deleteMany({});
+        // await usersCollection.deleteMany({});
+        // await commentsCollection.deleteMany({});
+        // await sessionsDataStorage.deleteMany({});
+        // await requestsRestrictionDataStorage.deleteMany({});
+
+        await Promise.all([
+            SessionModel.deleteMany({}),
+            CommentModel.deleteMany({}),
+            LikeModel.deleteMany({}),
+        ]);
+
+        await Promise.all([
+            bloggersCollection.deleteMany({}),
+            postsCollection.deleteMany({}),
+            usersCollection.deleteMany({}),
+            requestsRestrictionDataStorage.deleteMany({}),
+        ]);
     },
 };
