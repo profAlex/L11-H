@@ -40,13 +40,40 @@ export const getSeveralCommentsByPostId = async (
         }); // какие-то коды надо передавать, чтобы пользователи могли сообщать их техподдержке
     }
 
-    const commentsListOutput: PaginatedCommentViewModel =
-        await dataQueryRepository.getSeveralCommentsByPostId(
-            postId,
-            sanitizedQuery,
-        );
+    if (req.user === undefined || req.user.userId === undefined) {
+        console.error({
+            message:
+                "Required parameter is missing: 'req.user or req.user.userId' inside getSeveralCommentsByPostId in post-router-description.ts",
+            field: "'if (!req.user || !req.user.userId)' check failed",
+        });
 
-    return res.status(HttpStatus.Ok).send(commentsListOutput!);
+        return res.status(HttpStatus.InternalServerError).json({
+            message: "Internal server error",
+            field: "",
+        });
+    }
+
+    // const userId = req.user.userId;
+
+    if (req.user.userId === null) {
+        // console.warn();
+        const commentsListOutput: PaginatedCommentViewModel =
+            await dataQueryRepository.getSeveralCommentsByPostIdAnonimously(
+                postId,
+                sanitizedQuery,
+            );
+
+        return res.status(HttpStatus.Ok).send(commentsListOutput!);
+    } else {
+        const commentsListOutput: PaginatedCommentViewModel =
+            await dataQueryRepository.getSeveralCommentsByPostId(
+                postId,
+                req.user.userId,
+                sanitizedQuery,
+            );
+
+        return res.status(HttpStatus.Ok).send(commentsListOutput!);
+    }
 };
 
 export const getSeveralPosts = async (req: Request, res: Response) => {
@@ -85,11 +112,11 @@ export const createNewPost = async (req: Request, res: Response) => {
 };
 
 export const findSinglePost = async (req: Request, res: Response) => {
-
-    const postId: string = typeof req.params[IdParamName.PostId] === 'string' ? req.params[IdParamName.PostId] : req.params[IdParamName.PostId][0];
-    const result = await dataQueryRepository.findSinglePost(
-        postId,
-    );
+    const postId: string =
+        typeof req.params[IdParamName.PostId] === "string"
+            ? req.params[IdParamName.PostId]
+            : req.params[IdParamName.PostId][0];
+    const result = await dataQueryRepository.findSinglePost(postId);
 
     if (result === undefined) {
         res.sendStatus(HttpStatus.NotFound);
@@ -99,12 +126,11 @@ export const findSinglePost = async (req: Request, res: Response) => {
 };
 
 export const updatePost = async (req: Request, res: Response) => {
-
-    const postId: string = typeof req.params[IdParamName.PostId] === 'string' ? req.params[IdParamName.PostId] : req.params[IdParamName.PostId][0];
-    const result = await postsService.updatePost(
-        postId,
-        req.body,
-    );
+    const postId: string =
+        typeof req.params[IdParamName.PostId] === "string"
+            ? req.params[IdParamName.PostId]
+            : req.params[IdParamName.PostId][0];
+    const result = await postsService.updatePost(postId, req.body);
 
     if (result === undefined) {
         res.sendStatus(HttpStatus.NotFound);
@@ -114,11 +140,11 @@ export const updatePost = async (req: Request, res: Response) => {
 };
 
 export const deletePost = async (req: Request, res: Response) => {
-
-    const postId: string = typeof req.params[IdParamName.PostId] === 'string' ? req.params[IdParamName.PostId] : req.params[IdParamName.PostId][0];
-    const result = await postsService.deletePost(
-        postId,
-    );
+    const postId: string =
+        typeof req.params[IdParamName.PostId] === "string"
+            ? req.params[IdParamName.PostId]
+            : req.params[IdParamName.PostId][0];
+    const result = await postsService.deletePost(postId);
 
     if (result === undefined) {
         res.sendStatus(HttpStatus.NotFound);
@@ -214,10 +240,14 @@ export const createNewComment = async (
             field: "'if (!req.user || !req.user.userId)' check failed",
         });
 
-        return res.status(HttpStatus.InternalServerError).json({errorsMessages: [{
-            message: "Internal server error",
-            field: "",
-        }]});
+        return res.status(HttpStatus.InternalServerError).json({
+            errorsMessages: [
+                {
+                    message: "Internal server error",
+                    field: "",
+                },
+            ],
+        });
     }
 
     const userId = req.user.userId;
@@ -228,10 +258,14 @@ export const createNewComment = async (
             field: "'if (typeof userId !== \"string\" || userId.trim().length === 0)' check failed",
         });
 
-        return res.status(HttpStatus.InternalServerError).json({errorsMessages: [{
-            message: "Internal server error",
-            field: "",
-        }]});
+        return res.status(HttpStatus.InternalServerError).json({
+            errorsMessages: [
+                {
+                    message: "Internal server error",
+                    field: "",
+                },
+            ],
+        });
     }
 
     const newCommentResult = await postsService.createNewComment(
@@ -247,7 +281,9 @@ export const createNewComment = async (
             JSON.stringify(newCommentResult.errorsMessages),
         );
 
-        return res.status(newCommentResult.statusCode).json({ errorsMessages: newCommentResult.errorsMessages });
+        return res
+            .status(newCommentResult.statusCode)
+            .json({ errorsMessages: newCommentResult.errorsMessages });
     }
 
     return res.status(newCommentResult.statusCode).send(newCommentResult.data);

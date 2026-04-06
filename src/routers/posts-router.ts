@@ -25,12 +25,23 @@ import {
 } from "./util-enums/fields-for-sorting";
 import { accessTokenGuard } from "./guard-middleware/access-token-guard";
 import { commentInputModelValidation } from "./validation-middleware/comment-input-model-validation";
+import { optionalAccessTokenGuard } from "./guard-middleware/optional-access-token-guard";
 
 export const postsRouter = Router();
 
 const validateParameterPostId = createIdValidator(
     IdParamName.PostId,
     CollectionNames.Posts,
+);
+
+// requests a list of comments for specified postId
+postsRouter.get(
+    `/:${IdParamName.PostId}/comments`,
+    optionalAccessTokenGuard,
+    validateParameterPostId,
+    inputPaginationValidatorForComments(CommentsSortListEnum),
+    inputErrorManagementMiddleware,
+    getSeveralCommentsByPostId,
 );
 
 // creates new comment
@@ -41,15 +52,6 @@ postsRouter.post(
     commentInputModelValidation,
     inputErrorManagementMiddleware,
     createNewComment,
-);
-
-// requests a list of comments for specified postId
-postsRouter.get(
-    `/:${IdParamName.PostId}/comments`,
-    validateParameterPostId,
-    inputPaginationValidatorForComments(CommentsSortListEnum),
-    inputErrorManagementMiddleware,
-    getSeveralCommentsByPostId,
 );
 
 // Returns all posts

@@ -41,6 +41,10 @@ import { mapSessionStorageToDeviceViewModel } from "../mappers/mapSessionStorage
 import { SessionStorageModel } from "../../routers/router-types/auth-SessionStorageModel";
 import { RequestRestrictionStorageModel } from "../../routers/router-types/auth-RequestRestrictionStorageModel";
 import { findUserByPrimaryKey } from "./users-query-repository";
+import { LikeDocument } from "../../db/mongoose-like-collection-model";
+import { LikesQueryRepository } from "./likes-query-repository";
+import { container } from "../../composition-root/composition-root";
+import { TYPES } from "../../composition-root/ioc-types";
 
 async function findBlogByPrimaryKey(
     id: ObjectId,
@@ -67,7 +71,79 @@ async function findCommentByPrimaryKey(
 }
 
 export const dataQueryRepository = {
+
     async getSeveralCommentsByPostId(
+        sentPostId: string,
+        sentUserId: string,
+        sentSanitizedQuery: InputGetCommentsQueryModel,
+    ): Promise<PaginatedCommentViewModel> {
+        const { sortBy, sortDirection, pageNumber, pageSize } =
+            sentSanitizedQuery;
+
+        const skip = (pageNumber - 1) * pageSize;
+
+        const items = await commentsCollection
+            .find({ relatedPostId: sentPostId })
+
+            // "asc" (по возрастанию), то используется 1
+            // "desc" — то -1 для сортировки по убыванию. - по алфавиту от Я-А, Z-A
+            .sort({ [sortBy]: sortDirection })
+
+            // пропускаем определённое количество док. перед тем, как вернуть нужный набор данных.
+            .skip(skip)
+
+            // ограничивает количество возвращаемых документов до значения pageSize
+            .limit(pageSize)
+            .toArray();
+
+        const totalCount = await commentsCollection.countDocuments({
+            relatedPostId: sentPostId,
+        });
+
+        const likesQueryRepository = container.get<LikesQueryRepository>(TYPES.LikesQueryRepository);
+
+        const itemsWithReactions = await Promise.all(items.map(async (comment) => {
+            // ищем реакцию в базе
+            const reaction = await likesQueryRepository.checkIfUserAlreadyReacted(
+                sentUserId,
+                comment.id,
+            );
+
+            // если реакции нет, оставляем текущий статус (None),
+            // если есть — берем статус из базы.
+            const newStatus = reaction ? reaction.likeStatus : comment.likesInfo.myStatus;
+
+            // возвращаем НОВЫЙ объект комментария
+            return {
+                ...comment,
+                likesInfo: {
+                    ...comment.likesInfo,
+                    myStatus: newStatus
+                }
+            };
+        }));
+        // const previousReactionResult: LikeDocument | null =
+        //     await likesQueryRepository.checkIfUserAlreadyReacted(
+        //         sentUserId,
+        //         sentCommentId,
+        //     );
+        //
+        // if(previousReactionResult)
+        // {
+        //     foundComment.likesInfo.myStatus = previousReactionResult.likeStatus;
+        // }
+
+
+
+
+        return mapToCommentListPaginatedOutput(itemsWithReactions, {
+            pageNumber: pageNumber,
+            pageSize: pageSize,
+            totalCount,
+        });
+    },
+
+    async getSeveralCommentsByPostIdAnonimously(
         sentPostId: string,
         sentSanitizedQuery: InputGetCommentsQueryModel,
     ): Promise<PaginatedCommentViewModel> {
