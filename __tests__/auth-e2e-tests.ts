@@ -373,8 +373,8 @@ describe("Test API for managing login, registration and registration-confirmatio
         expect(loginRes.status).toBe(HttpStatus.Ok);
         expect(loginRes.body.accessToken).toBeDefined();
         expect(loginRes.header["set-cookie"]).toBeDefined();
-        const setCookieValue = loginRes.header["set-cookie"];
 
+        const setCookieValue = loginRes.header["set-cookie"];
         let refreshTokenCookie: string | undefined;
 
         if (Array.isArray(setCookieValue)) {
@@ -414,7 +414,7 @@ describe("Test API for managing login, registration and registration-confirmatio
             /^[a-zA-Z0-9\-_]+\.[a-zA-Z0-9\-_]+\.[a-zA-Z0-9\-_]+$/,
         ); // проверка формата JWT
 
-        console.log(refreshTokenCookie);
+        console.log("Refresh token we got after successful login:", refreshTokenCookie);
 
         //изобретаем задержку на 1 секунду
         const delay = (ms: number) =>

@@ -24,6 +24,8 @@ export class RefreshTokenGuard {
         const { refreshToken } = req.cookies || {}; // || {} введено для тех случаев если забыли например подключить cooke-parcer, тогда поля cookies в структуре req вообще будет отсутствовать и тогда undefined крашнет приложение
 
         if (!refreshToken) {
+            console.warn("Malformed refresh token, was not found.");
+
             return res.status(HttpStatus.Unauthorized).json({
                 error: `Malformed refresh token, was not found.`,
             });
@@ -31,9 +33,13 @@ export class RefreshTokenGuard {
 
         const rawPayload = await jwtService.verifyRefreshToken(refreshToken);
 
+        console.warn("DID WE GET HERE??");
+
         if (!rawPayload) {
+            console.warn("Improper refresh token format.");
+
             return res.status(HttpStatus.Unauthorized).json({
-                error: `Improper refresh token format`,
+                error: `Improper refresh token format.`,
             });
         }
 
@@ -42,6 +48,8 @@ export class RefreshTokenGuard {
         // поэтому нужно добавлять явные проверки в рантайме
 
         if (!rawPayload.userId) {
+            console.warn("Improper refresh token format. Missing userId in refresh token.");
+
             return res.status(HttpStatus.Unauthorized).json({
                 error: `Improper refresh token format. Missing userId in refresh token.`,
             });

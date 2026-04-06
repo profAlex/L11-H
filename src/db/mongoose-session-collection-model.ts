@@ -36,7 +36,7 @@ const SessionSchema = new Schema<SessionStorageModel>(
 
 // хук перед сохранением - здесь прописываем логику конструктора, которая была в class UserSession
 SessionSchema.pre<SessionDocument>("validate", async function () {
-    // 1. Генерация UUID, если его еще нет
+    // генерация UUID
     if (!this.deviceId) {
         this.deviceId = UUIDgeneration.generateUUID();
     }
@@ -64,7 +64,7 @@ SessionSchema.pre<SessionDocument>("validate", async function () {
 type SessionModelType = Model<SessionStorageModel>;
 export type SessionDocument = HydratedDocument<SessionStorageModel>;
 export const SessionModel = model<SessionStorageModel, SessionModelType>(
-    "Session",
+    "SessionModel",
     SessionSchema,
 );
 

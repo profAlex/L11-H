@@ -14,10 +14,21 @@ import { PostInputModel } from "../src/routers/router-types/post-input-model";
 import { UserInputModel } from "../src/routers/router-types/user-input-model";
 import { AccessTokenModel } from "../src/adapters/verification/auth-access-token-model";
 import { HttpStatus } from "../src/common/http-statuses/http-statuses";
+import { container } from "../src/composition-root/composition-root";
+import { UsersCommandRepository } from "../src/repository-layers/command-repository-layer/users-command-repository";
+import { TYPES } from "../src/composition-root/ioc-types";
+import { UsersQueryRepository } from "../src/repository-layers/query-repository-layer/users-query-repository";
 
 describe("Test API for managing comments", () => {
     const testApp = express();
     setupApp(testApp);
+
+    const usersCommandRepository = container.get<UsersCommandRepository>(
+        TYPES.UsersCommandRepository,
+    );
+    const usersQueryRepository = container.get<UsersQueryRepository>(
+        TYPES.UsersQueryRepository,
+    );
 
     beforeAll(async () => {
         await runDB();
@@ -126,28 +137,28 @@ describe("Test API for managing comments", () => {
             password: "hello_world",
             email: "test_email@yandex.com",
         };
-        userId_1 = await dataCommandRepository.createNewUser(newUser_1);
+        userId_1 = await usersCommandRepository.createNewUser(newUser_1);
 
         const newUser_2: UserInputModel = {
             login: "hello_world_2",
             password: "hello_world",
             email: "test_email_2@yandex.com",
         };
-        userId_2 = await dataCommandRepository.createNewUser(newUser_2);
+        userId_2 = await usersCommandRepository.createNewUser(newUser_2);
 
         const newUser_3: UserInputModel = {
             login: "hello_world_3",
             password: "hello_world",
             email: "test_email_3@yandex.com",
         };
-        userId_3 = await dataCommandRepository.createNewUser(newUser_3);
+        userId_3 = await usersCommandRepository.createNewUser(newUser_3);
 
         const newUser_4: UserInputModel = {
             login: "hello_world_4",
             password: "hello_world",
             email: "test_email_4@yandex.com",
         };
-        userId_4 = await dataCommandRepository.createNewUser(newUser_4);
+        userId_4 = await usersCommandRepository.createNewUser(newUser_4);
     });
 
     it("POST /posts/{postId}/comments - successfully creating comment", async () => {
@@ -174,13 +185,13 @@ describe("Test API for managing comments", () => {
             .set("Authorization", "Bearer " + tokenRecieved.toString())
             .send(comment);
 
-        expect(Object.entries(createComment.body).length).toBe(4);
+        expect(Object.entries(createComment.body).length).toBe(5);
         expect(createComment.body).toHaveProperty("id");
         expect(createComment.body).toHaveProperty("content");
         expect(createComment.body).toHaveProperty("commentatorInfo");
         expect(createComment.body).toHaveProperty("createdAt");
 
-        expect(Object.keys(createComment.body.commentatorInfo).length).toBe(2);
+        expect(Object.keys(createComment.body.commentatorInfo).length).toBe(3); // в схеме CommentatorInfo будет свой собственный _id ибо mongoose
         expect(createComment.body.commentatorInfo).toHaveProperty("userId");
         expect(createComment.body.commentatorInfo).toHaveProperty(
             "userLogin",
@@ -232,7 +243,7 @@ describe("Test API for managing comments", () => {
     });
 
     let commentId: string = "";
-    it("GET /posts/{postId}/comments - successful retrieving comment", async () => {
+    it("GET /posts/{postId}/comments - successfully retrieving comment without being logged in", async () => {
         // const loginCreds = {
         //     loginOrEmail: "hello_world",
         //     password: "hello_world",
@@ -252,6 +263,37 @@ describe("Test API for managing comments", () => {
             `${POSTS_PATH}/${postId_1}/comments`,
         );
         // .set("Authorization", "Bearer " + tokenRecieved.toString());
+
+        expect(Object.keys(retrieveComment.body).length).toBe(5);
+
+        expect(retrieveComment.body).toHaveProperty("items");
+
+        commentId = retrieveComment.body.items[0].id;
+        const content = retrieveComment.body.items[0].content;
+        expect(content).toEqual("stringstringstringst");
+
+        expect(retrieveComment.status).toEqual(HttpStatus.Ok);
+    });
+
+    it("GET /posts/{postId}/comments - successfully retrieving comment being logged in", async () => {
+        const loginCreds = {
+            loginOrEmail: "hello_world",
+            password: "hello_world",
+        };
+
+        const loginAttempt = await request(testApp)
+            .post(`${AUTH_PATH}/login`)
+            .send(loginCreds);
+
+        expect(Object.entries(loginAttempt.body).length).toBe(1);
+        expect(Object.keys(loginAttempt.body).length).toBe(1);
+        expect(loginAttempt.body).toHaveProperty("accessToken");
+
+        const tokenRecieved = loginAttempt.body["accessToken"];
+
+        const retrieveComment = await request(testApp)
+            .get(`${POSTS_PATH}/${postId_1}/comments`)
+            .set("Authorization", "Bearer " + tokenRecieved.toString());
 
         expect(Object.keys(retrieveComment.body).length).toBe(5);
 
@@ -285,7 +327,7 @@ describe("Test API for managing comments", () => {
         );
         // .set("Authorization", "Bearer " + tokenRecieved.toString());
 
-        expect(Object.keys(retrieveComment.body).length).toBe(4);
+        expect(Object.keys(retrieveComment.body).length).toBe(5);
 
         expect(retrieveComment.status).toEqual(HttpStatus.Ok);
     });

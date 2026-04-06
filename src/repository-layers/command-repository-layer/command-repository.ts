@@ -3,38 +3,24 @@ import { PostViewModel } from "../../routers/router-types/post-view-model";
 import { PostInputModel } from "../../routers/router-types/post-input-model";
 import {
     bloggersCollection,
+    CommentModel,
     commentsCollection,
     postsCollection,
-    usersCollection,
-    sessionsDataStorage,
     requestsRestrictionDataStorage,
-    CommentModel,
+    sessionsDataStorage,
+    usersCollection,
 } from "../../db/mongo.db";
-import { ObjectId, WithId } from "mongodb";
+import { ObjectId } from "mongodb";
 import { BlogPostInputModel } from "../../routers/router-types/blog-post-input-model";
 import { CustomError } from "../utility/custom-error-class";
-import { UserInputModel } from "../../routers/router-types/user-input-model";
 import { UserCollectionStorageModel } from "../../routers/router-types/user-storage-model";
 import { CommentViewModel } from "../../routers/router-types/comment-view-model";
 import { CustomResult } from "../../common/result-type/result-type";
 import { HttpStatus } from "../../common/http-statuses/http-statuses";
 import { CommentStorageModel } from "../../routers/router-types/comment-storage-model";
-import { CommentInputModel } from "../../routers/router-types/comment-input-model";
-import { User } from "../../common/classes/user-class";
-import {
-    emailExamples,
-    mailerService,
-} from "../../adapters/email-sender/mailer-service";
-import { RegistrationConfirmationInput } from "../../routers/router-types/auth-registration-confirmation-input-model";
-import { ResentRegistrationConfirmationInput } from "../../routers/router-types/auth-resent-registration-confirmation-input-model";
-import { randomUUID } from "node:crypto";
-import { RefreshTokenModel } from "../../adapters/verification/auth-refresh-token-model";
-import { UserSession } from "../../common/classes/session-class";
 import { SessionStorageModel } from "../../routers/router-types/auth-SessionStorageModel";
 import { RequestRestrictionStorageModel } from "../../routers/router-types/auth-RequestRestrictionStorageModel";
-import { BcryptService } from "../../adapters/authentication/bcrypt-service";
-import { PasswordRecoveryInputModel } from "../../routers/router-types/auth-password-recovery-input-model";
-import { NewPasswordRecoveryInputModel } from "../../routers/router-types/auth-new-password-recovery-input-model";
+import { LikeStatus } from "../../routers/router-types/comment-like-storage-model";
 
 export type BloggerCollectionStorageModel = {
     _id: ObjectId;
@@ -658,8 +644,9 @@ export const dataCommandRepository = {
                     content: content,
                     commentatorInfo: { userId: userId, userLogin: userLogin },
                     createdAt: new Date(),
+                    likesInfo: { myStatus: LikeStatus.None },
                 });
-
+                // console.warn("WE GOT HERE??!!");
                 return {
                     data: {
                         id: newCommentEntry.id,

@@ -43,39 +43,75 @@ export async function runDB() {
     client = new MongoClient(URI);
     db = client.db(DB_NAME);
 
-    // Инициализация коллекций (Native Driver)
-    bloggersCollection = db.collection<BlogViewModel>(BLOGGERS_COLLECTION_NAME);
-    postsCollection = db.collection<PostViewModel>(POSTS_COLLECTION_NAME);
-    usersCollection = db.collection<UserCollectionStorageModel>(USERS_COLLECTION_NAME);
-    //refreshTokensBlackListCollection = db.collection<RefreshTokensStorageModel>(REFRESH_TOKENS_COLLECTION_NAME);
-    commentsCollection = db.collection<CommentStorageModel>(COMMENTS_COLLECTION_NAME);
-    sessionsDataStorage = db.collection<SessionStorageModel>(SESSIONS_COLLECTION_NAME);
-    requestsRestrictionDataStorage = db.collection<RequestRestrictionStorageModel>(REQUESTS_RESTRICTIONS_COLLECTION_NAME);
+    // // Инициализация коллекций (Native Driver)
+    // bloggersCollection = db.collection<BlogViewModel>(BLOGGERS_COLLECTION_NAME);
+    // postsCollection = db.collection<PostViewModel>(POSTS_COLLECTION_NAME);
+    // usersCollection = db.collection<UserCollectionStorageModel>(USERS_COLLECTION_NAME);
+    // //refreshTokensBlackListCollection = db.collection<RefreshTokensStorageModel>(REFRESH_TOKENS_COLLECTION_NAME);
+    // commentsCollection = db.collection<CommentStorageModel>(COMMENTS_COLLECTION_NAME);
+    // sessionsDataStorage = db.collection<SessionStorageModel>(SESSIONS_COLLECTION_NAME);
+    // requestsRestrictionDataStorage = db.collection<RequestRestrictionStorageModel>(REQUESTS_RESTRICTIONS_COLLECTION_NAME);
 
     try {
-        // подключаем базу данных, пока гибридно
-        await client.connect();
-        await mongoose.connect(URI, { dbName: DB_NAME });
+        client = new MongoClient(URI);
+        await client.connect(); // Сначала коннект
 
-        const nativeDb = client.db(DB_NAME);
+        db = client.db(DB_NAME);
+        const nativeDb = db;
 
-        // ВАЖНО: Полностью сносим коллекцию. Это удалит ВСЕ индексы.
-        // Делаем это ПЕРЕД вызовом createIndexes()
+        // Инициализация коллекций (Native Driver)
+        bloggersCollection = db.collection<BlogViewModel>(BLOGGERS_COLLECTION_NAME);
+        postsCollection = db.collection<PostViewModel>(POSTS_COLLECTION_NAME);
+        usersCollection = db.collection<UserCollectionStorageModel>(USERS_COLLECTION_NAME);
+        commentsCollection = db.collection<CommentStorageModel>(COMMENTS_COLLECTION_NAME);
+        sessionsDataStorage = db.collection<SessionStorageModel>(SESSIONS_COLLECTION_NAME);
+        requestsRestrictionDataStorage = db.collection<RequestRestrictionStorageModel>(REQUESTS_RESTRICTIONS_COLLECTION_NAME);
+
         try {
-            await nativeDb.dropCollection(SESSIONS_COLLECTION_NAME);
-            console.log(`🧹 Collection ${SESSIONS_COLLECTION_NAME} dropped to reset indexes`);
+            // await nativeDb.dropCollection(SESSIONS_COLLECTION_NAME);
+            // console.log(`🧹 Collection ${SESSIONS_COLLECTION_NAME} dropped to reset indexes`);
+            //
+            // await nativeDb.dropCollection(COMMENTS_COLLECTION_NAME);
+            // console.log(`🧹 Collection ${COMMENTS_COLLECTION_NAME} dropped to reset indexes`);
+            //
+            // await nativeDb.dropCollection(LIKES_COLLECTION_NAME);
+            // console.log(`🧹 Collection ${LIKES_COLLECTION_NAME} dropped to reset indexes`);
+            //
+            // await nativeDb.dropCollection(REQUESTS_RESTRICTIONS_COLLECTION_NAME);
+            // console.log(`🧹 Collection ${REQUESTS_RESTRICTIONS_COLLECTION_NAME} dropped to reset indexes`);
+            //
+            // // Даем Atlas время (1 секунда), чтобы очистить кэш
+            // await new Promise(res => setTimeout(res, 1000));
 
-            await nativeDb.dropCollection(COMMENTS_COLLECTION_NAME);
-            console.log(`🧹 Collection ${COMMENTS_COLLECTION_NAME} dropped to reset indexes`);
+            await mongoose.connect(URI, { dbName: DB_NAME });
 
-            await nativeDb.dropCollection(LIKES_COLLECTION_NAME);
-            console.log(`🧹 Collection ${LIKES_COLLECTION_NAME} dropped to reset indexes`);
+            // дропаем индексы средствами Mongoose
+            // Метод .collection.dropIndexes() обращается напрямую к коллекции через драйвер Mongoose
+            console.log("🧹 Dropping indexes via Mongoose...");
 
-            await nativeDb.dropCollection(REQUESTS_RESTRICTIONS_COLLECTION_NAME);
-            console.log(`🧹 Collection ${REQUESTS_RESTRICTIONS_COLLECTION_NAME} dropped to reset indexes`);
+            await Promise.all([
+                safeMongooseDropIndexes(SessionModel),
+                safeMongooseDropIndexes(CommentModel),
+                safeMongooseDropIndexes(LikeModel)
+            ]);
 
-            // Даем Atlas время (1 секунда), чтобы очистить кэш
-            await new Promise(res => setTimeout(res, 1000));
+            // создаем индексы заново (синхронизируем со схемами)
+            await Promise.all([
+                SessionModel.createIndexes(),
+                CommentModel.createIndexes(), // Создаст и твой новый составной индекс
+                LikeModel.createIndexes()
+            ]);
+
+            console.log("✅ Mongoose indexes rebuilt successfully");
+
+            // для Native коллекций оставляем пока старый хелпер
+            await setupCollectionIndexes(
+                requestsRestrictionDataStorage,
+                REQUESTS_RESTRICTIONS_COLLECTION_NAME,
+                [{ field: "dateOfRequest", name: "dateOfRequest_1", ttl: 30, description: "" }]
+            );
+
+            console.log(`🟢 Connected to DB ${DB_NAME}`);
         } catch (e) {
             console.log("ℹ️ Collection did not exist, skipping drop");
         }
@@ -85,7 +121,6 @@ export async function runDB() {
         await Promise.all([
             SessionModel.createIndexes(),
             LikeModel.createIndexes(),
-
             CommentModel.createIndexes()
         ]);
         console.log("✅ Fresh Mongoose indexes created successfully");
@@ -131,6 +166,17 @@ export async function closeDB() {
     }
 }
 
+async function safeMongooseDropIndexes(model: mongoose.Model<any>) {
+    try {
+        // collection.dropIndexes() удаляет все индексы кроме _id
+        await model.collection.dropIndexes();
+    } catch (e: any) {
+        // Если коллекции еще нет (код 26), просто игнорируем
+        if (e.code !== 26) {
+            console.warn(`Note: Could not drop indexes for ${model.modelName}: ${e.message}`);
+        }
+    }
+}
 
 async function setupCollectionIndexes(
     collection: Collection<any>,

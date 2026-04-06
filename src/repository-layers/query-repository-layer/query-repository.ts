@@ -2,9 +2,11 @@ import { PaginatedBlogViewModel } from "../../routers/router-types/blog-paginate
 import { InputGetBlogsQuery } from "../../routers/router-types/blog-search-input-model";
 import {
     bloggersCollection,
+    CommentModel,
     commentsCollection,
     postsCollection,
     requestsRestrictionDataStorage,
+    SessionModel,
     sessionsDataStorage,
     usersCollection,
 } from "../../db/mongo.db";
@@ -71,7 +73,6 @@ async function findCommentByPrimaryKey(
 }
 
 export const dataQueryRepository = {
-
     async getSeveralCommentsByPostId(
         sentPostId: string,
         sentUserId: string,
@@ -82,46 +83,61 @@ export const dataQueryRepository = {
 
         const skip = (pageNumber - 1) * pageSize;
 
-        const items = await commentsCollection
-            .find({ relatedPostId: sentPostId })
+        // const items = await commentsCollection
+        //     .find({ relatedPostId: sentPostId })
+        //
+        //     // "asc" (по возрастанию), то используется 1
+        //     // "desc" — то -1 для сортировки по убыванию. - по алфавиту от Я-А, Z-A
+        //     .sort({ [sortBy]: sortDirection })
+        //
+        //     // пропускаем определённое количество док. перед тем, как вернуть нужный набор данных.
+        //     .skip(skip)
+        //
+        //     // ограничивает количество возвращаемых документов до значения pageSize
+        //     .limit(pageSize)
+        //     .toArray();
+        //
+        // const totalCount = await commentsCollection.countDocuments({
+        //     relatedPostId: sentPostId,
+        // });
 
-            // "asc" (по возрастанию), то используется 1
-            // "desc" — то -1 для сортировки по убыванию. - по алфавиту от Я-А, Z-A
-            .sort({ [sortBy]: sortDirection })
-
-            // пропускаем определённое количество док. перед тем, как вернуть нужный набор данных.
+        const items = await CommentModel.find({ relatedPostId: sentPostId })
+            .sort({ [sortBy]: sortDirection === "asc" ? 1 : -1 })
             .skip(skip)
-
-            // ограничивает количество возвращаемых документов до значения pageSize
             .limit(pageSize)
-            .toArray();
+            .lean();
 
-        const totalCount = await commentsCollection.countDocuments({
-            relatedPostId: sentPostId,
-        });
+        const totalCount = await CommentModel.countDocuments({ relatedPostId: sentPostId });
 
-        const likesQueryRepository = container.get<LikesQueryRepository>(TYPES.LikesQueryRepository);
+        const likesQueryRepository = container.get<LikesQueryRepository>(
+            TYPES.LikesQueryRepository,
+        );
 
-        const itemsWithReactions = await Promise.all(items.map(async (comment) => {
-            // ищем реакцию в базе
-            const reaction = await likesQueryRepository.checkIfUserAlreadyReacted(
-                sentUserId,
-                comment.id,
-            );
+        const itemsWithReactions = await Promise.all(
+            items.map(async (comment) => {
+                // ищем реакцию в базе
+                const reaction =
+                    await likesQueryRepository.checkIfUserAlreadyReacted(
+                        sentUserId,
+                        comment.id,
+                    );
 
-            // если реакции нет, оставляем текущий статус (None),
-            // если есть — берем статус из базы.
-            const newStatus = reaction ? reaction.likeStatus : comment.likesInfo.myStatus;
+                // если реакции нет, оставляем текущий статус (None),
+                // если есть — берем статус из базы.
+                const newStatus = reaction
+                    ? reaction.likeStatus
+                    : comment.likesInfo.myStatus;
 
-            // возвращаем НОВЫЙ объект комментария
-            return {
-                ...comment,
-                likesInfo: {
-                    ...comment.likesInfo,
-                    myStatus: newStatus
-                }
-            };
-        }));
+                // возвращаем НОВЫЙ объект комментария
+                return {
+                    ...comment,
+                    likesInfo: {
+                        ...comment.likesInfo,
+                        myStatus: newStatus,
+                    },
+                };
+            }),
+        );
         // const previousReactionResult: LikeDocument | null =
         //     await likesQueryRepository.checkIfUserAlreadyReacted(
         //         sentUserId,
@@ -132,9 +148,6 @@ export const dataQueryRepository = {
         // {
         //     foundComment.likesInfo.myStatus = previousReactionResult.likeStatus;
         // }
-
-
-
 
         return mapToCommentListPaginatedOutput(itemsWithReactions, {
             pageNumber: pageNumber,
@@ -152,24 +165,33 @@ export const dataQueryRepository = {
 
         const skip = (pageNumber - 1) * pageSize;
 
-        const items = await commentsCollection
-            .find({ relatedPostId: sentPostId })
-
-            // "asc" (по возрастанию), то используется 1
-            // "desc" — то -1 для сортировки по убыванию. - по алфавиту от Я-А, Z-A
-            .sort({ [sortBy]: sortDirection })
-
-            // пропускаем определённое количество док. перед тем, как вернуть нужный набор данных.
+        const items = await CommentModel.find({ relatedPostId: sentPostId })
+            .sort({ [sortBy]: sortDirection === "asc" ? 1 : -1 })
             .skip(skip)
-
-            // ограничивает количество возвращаемых документов до значения pageSize
             .limit(pageSize)
-            .toArray();
+            .lean();
 
-        const totalCount = await commentsCollection.countDocuments({
-            relatedPostId: sentPostId,
-        });
+        const totalCount = await CommentModel.countDocuments({ relatedPostId: sentPostId });
+        // const items = await commentsCollection
+        //     .find({ relatedPostId: sentPostId })
+        //
+        //     // "asc" (по возрастанию), то используется 1
+        //     // "desc" — то -1 для сортировки по убыванию. - по алфавиту от Я-А, Z-A
+        //     .sort({ [sortBy]: sortDirection })
+        //
+        //     // пропускаем определённое количество док. перед тем, как вернуть нужный набор данных.
+        //     .skip(skip)
+        //
+        //     // ограничивает количество возвращаемых документов до значения pageSize
+        //     .limit(pageSize)
+        //     .toArray();
 
+
+        // const totalCount = await commentsCollection.countDocuments({
+        //     relatedPostId: sentPostId,
+        // });
+
+        //console.warn("WE GOT INSIDE getSeveralCommentsByPostIdAnonimously");
         return mapToCommentListPaginatedOutput(items, {
             pageNumber: pageNumber,
             pageSize: pageSize,
@@ -532,8 +554,8 @@ export const dataQueryRepository = {
     // *****************************
     // методы для security-devices
     // *****************************
-    async utilGetAllSessionRecords():Promise<Array<SessionStorageModel>> {
-        return await sessionsDataStorage.find({}).toArray();
+    async utilGetAllSessionRecords(): Promise<Array<SessionStorageModel>> {
+        return await SessionModel.find({}).lean();
     },
 
     async getActiveDevicesList(
@@ -568,7 +590,7 @@ export const dataQueryRepository = {
         url: string,
         deviceIp: string,
         deviceName: string,
-        timeout: number
+        timeout: number,
     ): Promise<boolean> {
         // Определяем временную границу: сейчас минус 10 секунд
         const tenSecondsAgo = new Date(Date.now() - timeout * 1000);
@@ -596,7 +618,9 @@ export const dataQueryRepository = {
         }
     },
 
-    async utilGetAllRestrictedSessionRecords():Promise<Array<RequestRestrictionStorageModel>> {
+    async utilGetAllRestrictedSessionRecords(): Promise<
+        Array<RequestRestrictionStorageModel>
+    > {
         return await requestsRestrictionDataStorage.find({}).toArray();
     },
 

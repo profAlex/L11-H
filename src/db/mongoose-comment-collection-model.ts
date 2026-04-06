@@ -67,7 +67,7 @@ const CommentSchema = new Schema<CommentStorageModel>(
         content: { type: String, required: true },
         commentatorInfo: CommentatorInfoSchema,
         createdAt: { type: Date, required: true },
-        likesInfo: LikesInfoStorageSchema,
+        likesInfo: { type: LikesInfoStorageSchema, required: true, default: () => ({})}
     },
     {
         collection: COMMENTS_COLLECTION_NAME,
@@ -79,8 +79,10 @@ const CommentSchema = new Schema<CommentStorageModel>(
 );
 
 type CommentModelType = Model<CommentStorageModel>;
-
 export type CommentDocument = HydratedDocument<CommentStorageModel>;
+
+CommentSchema.index({ relatedPostId: 1, createdAt: -1 });
+
 export const CommentModel = model<CommentStorageModel, CommentModelType>(
     "CommentModel",
     CommentSchema,
