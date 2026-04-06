@@ -34,4 +34,15 @@ export class CommentsQueryService {
 
         return foundComment;
     }
+
+    async findSingleCommentAnonimously(sentCommentId: string): Promise<CommentViewModel | undefined> {
+
+        const foundComment = await this.commentsQueryRepository.findSingleComment(sentCommentId);
+
+        if(!foundComment) {
+            return undefined;
+        }
+
+        return foundComment;
+    }
 }

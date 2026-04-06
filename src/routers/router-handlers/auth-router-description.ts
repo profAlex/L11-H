@@ -180,13 +180,14 @@ export class AuthHandler {
     };
 
     public refreshTokenOnDemand = async (req: Request, res: Response) => {
+        console.warn("!!!HERE!!!___0");
+
         const pairOfTokens = await this.authCommandService.refreshTokenOnDemand(
             // req.cookies.refreshToken,
             req.deviceId!,
             req.user!.userId!,
             req.sessionId!,
         );
-        // console.warn("!!!HERE!!!");
 
         if (!pairOfTokens.data) {
             console.error(

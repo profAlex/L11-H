@@ -15,9 +15,7 @@ import { dataCommandRepository } from "../../repository-layers/command-repositor
 import { commentsService } from "../../service-layer(BLL)/comments-service";
 import { CommentsQueryService } from "../../service-layer(BLL)/comments-query-service";
 import { CommentsCommandService } from "../../service-layer(BLL)/comments-command-service";
-import {
-    LikeInputModel,
-} from "../router-types/comments-like-input-model";
+import { LikeInputModel } from "../router-types/comments-like-input-model";
 
 @injectable()
 export class CommentsHandler {
@@ -32,10 +30,10 @@ export class CommentsHandler {
         req: RequestWithParams<{ [IdParamName.CommentId]: string }>,
         res: Response,
     ) => {
-        if (!req.user || !req.user.userId) {
+        if (req.user === undefined || req.user.userId === undefined) {
             console.error({
                 message:
-                    "Required parameter is missing: 'req.user or req.user.userId' inside updateCommentById handler",
+                    "Required parameter is missing: 'req.user or req.user.userId' inside CommentsHandler.getCommentById",
                 field: "'if (!req.user || !req.user.userId)' check failed",
             });
 
@@ -45,16 +43,29 @@ export class CommentsHandler {
             });
         }
 
-        const result = await this.commentsQueryService.findSingleComment(
-            req.params[IdParamName.CommentId],
-            req.user.userId
-        );
+        if (req.user.userId === null) {
+            // console.warn();
+            const result = await this.commentsQueryService.findSingleCommentAnonimously(
+                req.params[IdParamName.CommentId],
+            );
 
-        if (!result) {
-            return res.sendStatus(HttpStatus.NotFound);
+            if (!result) {
+                return res.sendStatus(HttpStatus.NotFound);
+            }
+
+            return res.status(HttpStatus.Ok).send(result);
+        } else {
+            const result = await this.commentsQueryService.findSingleComment(
+                req.params[IdParamName.CommentId],
+                req.user.userId,
+            );
+
+            if (!result) {
+                return res.sendStatus(HttpStatus.NotFound);
+            }
+
+            return res.status(HttpStatus.Ok).send(result);
         }
-
-        return res.status(HttpStatus.Ok).send(result);
     };
 
     public updateCommentById = async (

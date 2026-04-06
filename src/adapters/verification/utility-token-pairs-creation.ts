@@ -22,6 +22,7 @@ export async function createTokenPair(
             errorsMessages: resCreatingAccessToken.errorsMessages,
         };
     }
+    console.warn("!!!HERE!!!___3");
 
     // пробуем создать refreshToken
     const resCreatingRefreshToken = await jwtService.createRefreshToken({
@@ -40,6 +41,7 @@ export async function createTokenPair(
             errorsMessages: resCreatingAccessToken.errorsMessages,
         };
     }
+    console.warn("!!!HERE!!!___4");
 
     return {
         data: {

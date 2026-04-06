@@ -56,6 +56,7 @@ const CommentSchema = new Schema<CommentStorageModel>(
         timestamps: false,
         versionKey: false,
         id: false,
+     autoIndex: false
     },
 );
 

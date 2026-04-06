@@ -438,6 +438,7 @@ export class AuthCommandService {
         const expiresAt = new Date(
             issuedAt.getTime() + envConfig.refreshTokenLifetime * 1000
         );
+        console.warn("!!!HERE!!!___1");
 
         // обновляем данные в базе сессий
         const isSessionUpdated =
@@ -460,6 +461,8 @@ export class AuthCommandService {
                 ]
             };
         }
+
+        console.warn("!!!HERE!!!___2");
 
         // создаем новые токены
         const pairOfToken = await createTokenPair(

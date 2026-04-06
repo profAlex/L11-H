@@ -6,11 +6,10 @@ import { inputErrorManagementMiddleware } from "./validation-middleware/error-ma
 import { commentInputModelValidation } from "./validation-middleware/comment-input-model-validation";
 import { accessTokenGuard } from "./guard-middleware/access-token-guard";
 import { likeStatusInputModelValidation } from "./validation-middleware/comment-like-input-model-validation";
-import { container } from "../composition-root/composition-root";
-import { TYPES } from "../composition-root/ioc-types";
 import { CommentsHandler } from "./router-handlers/comment-router-description";
+import { optionalAccessTokenGuard } from "./guard-middleware/optional-access-token-guard";
 
-// 1. Экспортируем функцию-фабрику вместо готового объекта router
+// экспортируем функцию-фабрику вместо готового объекта router
 export const getCommentsRouter = (commentsHandler: CommentsHandler) => {
     const commentsRouter = Router();
 
@@ -22,6 +21,7 @@ export const getCommentsRouter = (commentsHandler: CommentsHandler) => {
     // Return comment by id
     commentsRouter.get(
         `/:${IdParamName.CommentId}`,
+        optionalAccessTokenGuard,
         validateParameterCommentId,
         inputErrorManagementMiddleware,
         commentsHandler.getCommentById,

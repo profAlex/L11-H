@@ -30,6 +30,7 @@ const SessionSchema = new Schema<SessionStorageModel>(
         versionKey: false,
         timestamps: false,
         id: false,
+        autoIndex: false
     },
 );
 

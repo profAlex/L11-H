@@ -40,6 +40,7 @@ const LikeSchema = new mongoose.Schema<LikesStorageModel>(
         timestamps: false,
         versionKey: false,
         id: false,
+        autoIndex: false
     },
 );
 

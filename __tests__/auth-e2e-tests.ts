@@ -1,5 +1,5 @@
 import "reflect-metadata";
-import { Container } from "inversify";
+import { container } from "../src/composition-root/composition-root";
 import express from "express";
 import request from "supertest";
 import { setupApp } from "../src/setup-app";
@@ -14,12 +14,17 @@ import { UUIDgeneration } from "../src/adapters/randomUUIDgeneration/UUIDgenerat
 import { LoginInputModel } from "../src/routers/router-types/login-input-model";
 import jwt from "jsonwebtoken";
 import { envConfig } from "../src/config";
-import { usersCommandRepository, usersQueryRepository } from "../src/composition-root/composition-root";
 import { describe, it } from '@jest/globals';
+import { UsersCommandRepository } from "../src/repository-layers/command-repository-layer/users-command-repository";
+import { UsersQueryRepository } from "../src/repository-layers/query-repository-layer/users-query-repository";
+import { TYPES } from "../src/composition-root/ioc-types";
 
 describe("Test API for managing login, registration and registration-confirmation services", () => {
     const testApp = express();
     setupApp(testApp);
+
+    const usersCommandRepository = container.get<UsersCommandRepository>(TYPES.UsersCommandRepository);
+    const usersQueryRepository = container.get<UsersQueryRepository>(TYPES.UsersQueryRepository);
 
     beforeAll(async () => {
         await runDB();

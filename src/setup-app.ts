@@ -27,13 +27,13 @@ export const setupApp = (app: Express) => {
     app.use(express.json());
     app.use(cookieParser());
 
-    // 1. Извлекаем нужные хендлеры из контейнера
+    // перенсли гет-вызов контейнера сюда, чтобы гарантированно сначала собрался контейнер а затем уже создавались руты
     const commentsHandler = container.get<CommentsHandler>(TYPES.CommentsHandler);
 
-    // 2. Инициализируем роутеры через фабрики
+    // а здесь уже создаем руты (пока только один, самый конфликтный рут) через фабрики
     const commentsRouter = getCommentsRouter(commentsHandler);
 
-    // 3. Подключаем к приложению
+    // подключаем к приложению
     app.use(COMMENTS_PATH, commentsRouter);
 
     // Остальные роутеры (пока оставляем как есть или переводим на фабрики)
