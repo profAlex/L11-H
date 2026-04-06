@@ -8,6 +8,7 @@ import {
     usersCollection,
     sessionsDataStorage,
     requestsRestrictionDataStorage,
+    CommentModel,
 } from "../../db/mongo.db";
 import { ObjectId, WithId } from "mongodb";
 import { BlogPostInputModel } from "../../routers/router-types/blog-post-input-model";
@@ -34,8 +35,6 @@ import { RequestRestrictionStorageModel } from "../../routers/router-types/auth-
 import { BcryptService } from "../../adapters/authentication/bcrypt-service";
 import { PasswordRecoveryInputModel } from "../../routers/router-types/auth-password-recovery-input-model";
 import { NewPasswordRecoveryInputModel } from "../../routers/router-types/auth-new-password-recovery-input-model";
-
-
 
 export type BloggerCollectionStorageModel = {
     _id: ObjectId;
@@ -652,19 +651,36 @@ export const dataCommandRepository = {
             const userLogin = user.login;
             // тут по-идее также проверка на соответствие userLogin требованиям?
 
-            const tempId = new ObjectId();
-            const newCommentEntry = {
-                _id: tempId,
-                id: tempId.toString(),
-                relatedPostId: postId,
-                content: content,
-                commentatorInfo: { userId: userId, userLogin: userLogin },
-                createdAt: new Date(),
-            } as CommentStorageModel;
+            try {
+                // метод create({}) заменяет сразу два метода new + save()
+                const newCommentEntry = await CommentModel.create({
+                    relatedPostId: postId,
+                    content: content,
+                    commentatorInfo: { userId: userId, userLogin: userLogin },
+                    createdAt: new Date(),
+                });
 
-            const result = await commentsCollection.insertOne(newCommentEntry);
+                return {
+                    data: {
+                        id: newCommentEntry.id,
+                        content: newCommentEntry.content,
+                        commentatorInfo: newCommentEntry.commentatorInfo,
+                        createdAt: newCommentEntry.createdAt,
+                        likesInfo: newCommentEntry.likesInfo,
+                    },
+                    statusCode: HttpStatus.Created,
+                    errorsMessages: [
+                        {
+                            field: null,
+                            message: null,
+                        },
+                    ],
+                };
+            } catch (error) {
+                console.error(
+                    `Error inside dataCommandRepository.createNewComment while creating new comment: ${error instanceof Error ? error.message : "unknown error"}`,
+                );
 
-            if (!result.acknowledged) {
                 return {
                     data: null,
                     statusCode: HttpStatus.InternalServerError,
@@ -675,24 +691,34 @@ export const dataCommandRepository = {
                             message: "Error while inserting new comment",
                         },
                     ],
-                } as CustomResult<CommentViewModel>;
+                };
             }
 
-            return {
-                data: {
-                    id: newCommentEntry.id,
-                    content: newCommentEntry.content,
-                    commentatorInfo: newCommentEntry.commentatorInfo,
-                    createdAt: newCommentEntry.createdAt,
-                } as CommentViewModel,
-                statusCode: HttpStatus.Created,
-                errorsMessages: [
-                    {
-                        field: null,
-                        message: null,
-                    },
-                ],
-            };
+            // const tempId = new ObjectId();
+            // const newCommentEntry = {
+            //     _id: tempId,
+            //     id: tempId.toString(),
+            //     relatedPostId: postId,
+            //     content: content,
+            //     commentatorInfo: { userId: userId, userLogin: userLogin },
+            //     createdAt: new Date(),
+            // } as CommentStorageModel;
+            //
+            // const result = await commentsCollection.insertOne(newCommentEntry);
+
+            // if (!result.acknowledged) {
+            //     return {
+            //         data: null,
+            //         statusCode: HttpStatus.InternalServerError,
+            //         statusDescription: "Error while inserting new comment",
+            //         errorsMessages: [
+            //             {
+            //                 field: "dataCommandRepository.createNewComment -> commentsCollection.insertOne(newCommentEntry)", // это служебная и отладочная информация, к ней НЕ должен иметь доступ фронтенд, обрабатываем внутри периметра работы бэкэнда
+            //                 message: "Error while inserting new comment",
+            //             },
+            //         ],
+            //     } as CustomResult<CommentViewModel>;
+            // }
         } catch (error) {
             console.error(`Unknown error: ${JSON.stringify(error)}`);
             // throw new Error("Placeholder for an error to be rethrown and dealt with in the future in createNewUser method of dataCommandRepository");
