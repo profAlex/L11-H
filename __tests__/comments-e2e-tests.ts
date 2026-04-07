@@ -18,6 +18,9 @@ import { container } from "../src/composition-root/composition-root";
 import { UsersCommandRepository } from "../src/repository-layers/command-repository-layer/users-command-repository";
 import { TYPES } from "../src/composition-root/ioc-types";
 import { UsersQueryRepository } from "../src/repository-layers/query-repository-layer/users-query-repository";
+import { LikeStatus } from "../src/routers/router-types/comment-like-storage-model";
+import { CommentsHandler } from "../src/routers/router-handlers/comment-router-description";
+import { CommentsQueryService } from "../src/service-layer(BLL)/comments-query-service";
 
 describe("Test API for managing comments", () => {
     const testApp = express();
@@ -30,12 +33,30 @@ describe("Test API for managing comments", () => {
         TYPES.UsersQueryRepository,
     );
 
+    const commentsQueryService = container.get<CommentsQueryService>(TYPES.CommentsQueryService);
+
     beforeAll(async () => {
         await runDB();
+
+        // так как байндятся в .inSingletonScope(); то это будет работать и вот так с псевдосоазданием нового инстанса
+        jest.spyOn(
+            commentsQueryService,
+            "findSingleComment",
+        );
+
+        // но надежнее через прототип шпионить
+        jest.spyOn(
+            CommentsQueryService.prototype,
+            "findSingleCommentAnonimously",
+        );
 
         const res = await request(testApp).delete(`${TESTING_PATH}/all-data`);
         expect(res.status).toBe(204);
     });
+
+    // afterEach(() => {
+    //     jest.restoreAllMocks(); // Возвращает все методы к их оригинальному (не шпионскому) состоянию
+    // });
 
     afterAll(async () => {
         const res = await request(testApp).delete(`${TESTING_PATH}/all-data`);
@@ -273,6 +294,7 @@ describe("Test API for managing comments", () => {
         expect(content).toEqual("stringstringstringst");
 
         expect(retrieveComment.status).toEqual(HttpStatus.Ok);
+
     });
 
     it("GET /posts/{postId}/comments - successfully retrieving comments being logged in", async () => {
@@ -330,9 +352,16 @@ describe("Test API for managing comments", () => {
         expect(Object.keys(retrieveComment.body).length).toBe(5);
 
         expect(retrieveComment.status).toEqual(HttpStatus.Ok);
+
+
+
+        expect(
+            CommentsQueryService.prototype.findSingleCommentAnonimously,
+        ).toHaveBeenCalledTimes(1);
     });
 
-    it("PUT /comments/{commentId}/ - successful modifying comment", async () => {
+
+    it("GET /comments/{commentId}/ - successful retrieving comment being logged in", async () => {
         const loginCreds = {
             loginOrEmail: "hello_world",
             password: "hello_world",
@@ -347,29 +376,33 @@ describe("Test API for managing comments", () => {
         expect(loginAttempt.body).toHaveProperty("accessToken");
 
         const tokenRecieved = loginAttempt.body["accessToken"];
-        const modifiedComment = {
-            content: "modified stringstringstringst", // wrong name of the field - should be "content"
-        };
-        const retrieveComment = await request(testApp)
-            .put(`${COMMENTS_PATH}/${commentId}/`)
-            .set("Authorization", "Bearer " + tokenRecieved.toString())
-            .send(modifiedComment);
 
-        expect(retrieveComment.status).toEqual(HttpStatus.NoContent);
-
-        const retrieveModifiedComment = await request(testApp).get(
+        const retrieveComment = await request(testApp).get(
             `${COMMENTS_PATH}/${commentId}/`,
-        );
-        expect(Object.keys(retrieveModifiedComment.body).length).toBe(4);
-        expect(retrieveModifiedComment.body).toHaveProperty("content");
+        ).set("Authorization", "Bearer " + tokenRecieved.toString());
 
-        const content = retrieveModifiedComment.body.content;
-        expect(content).toEqual("modified stringstringstringst");
+        expect(Object.keys(retrieveComment.body).length).toBe(5);
 
-        expect(retrieveModifiedComment.status).toEqual(HttpStatus.Ok);
+        expect(retrieveComment.body).toHaveProperty("likesInfo");
+        expect(retrieveComment.body).toHaveProperty("commentatorInfo");
+
+
+        expect(retrieveComment.body.likesInfo.myStatus).toEqual(LikeStatus.None);
+        expect(retrieveComment.body.content).toEqual("stringstringstringst");
+
+        expect(retrieveComment.status).toEqual(HttpStatus.Ok);
+
+        // expect(
+        //     CommentsQueryService.prototype.findSingleComment,
+        // ).toHaveBeenCalledTimes(1);
+
+
+        expect(
+            commentsQueryService.findSingleComment,
+        ).toHaveBeenCalledTimes(1);
     });
 
-    it("DELETE /comments/{commentId}/ - successful deleting comment", async () => {
+    it("PUT /comments/{commentId}/ - successful modifying comment", async () => {
         const loginCreds = {
             loginOrEmail: "hello_world",
             password: "hello_world",
@@ -380,6 +413,50 @@ describe("Test API for managing comments", () => {
             new Promise((resolve) => setTimeout(resolve, ms));
         await delay(10000); // задержка 10 секунд
         console.log("Прошло 10 секунд");
+
+        const loginAttempt = await request(testApp)
+            .post(`${AUTH_PATH}/login`)
+            .send(loginCreds);
+
+        expect(Object.entries(loginAttempt.body).length).toBe(1);
+        expect(Object.keys(loginAttempt.body).length).toBe(1);
+        expect(loginAttempt.body).toHaveProperty("accessToken");
+
+        const tokenRecieved = loginAttempt.body["accessToken"];
+        const modifiedComment = {
+            content: "modified stringstringstringst",
+        };
+
+        const resultModifiedComment = await request(testApp)
+            .put(`${COMMENTS_PATH}/${commentId}/`)
+            .set("Authorization", "Bearer " + tokenRecieved.toString())
+            .send(modifiedComment);
+
+        expect(resultModifiedComment.status).toEqual(HttpStatus.NoContent);
+
+        const retrieveModifiedComment = await request(testApp).get(
+            `${COMMENTS_PATH}/${commentId}/`,
+        );
+        expect(Object.keys(retrieveModifiedComment.body).length).toBe(5);
+        expect(retrieveModifiedComment.body).toHaveProperty("content");
+
+        const content = retrieveModifiedComment.body.content;
+        expect(content).toEqual("modified stringstringstringst");
+
+        expect(retrieveModifiedComment.status).toEqual(HttpStatus.Ok);
+    },15000);
+
+    it("DELETE /comments/{commentId}/ - successful deleting comment", async () => {
+        const loginCreds = {
+            loginOrEmail: "hello_world",
+            password: "hello_world",
+        };
+
+        // //изобретаем задержку на 10 секунд, чтобы не срабатывал блок по количеству логинов в единицу времени
+        // const delay = (ms: number) =>
+        //     new Promise((resolve) => setTimeout(resolve, ms));
+        // await delay(10000); // задержка 10 секунд
+        // console.log("Прошло 10 секунд");
 
         const loginAttempt = await request(testApp)
             .post(`${AUTH_PATH}/login`)

@@ -12,7 +12,6 @@ import { dataQueryRepository } from "../src/repository-layers/query-repository-l
 import { HttpStatus } from "../src/common/http-statuses/http-statuses";
 import { jwtService } from "../src/adapters/verification/jwt-service";
 import { JwtRefreshPayloadType } from "../src/adapters/verification/payload-type";
-import { usersCommandRepository, usersQueryRepository } from "../src/composition-root/composition-root";
 
 describe("Test API for managing session life-time and updated refresh-token renewal system", () => {
     const testApp = express();

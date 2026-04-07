@@ -45,7 +45,7 @@ export class CommentsHandler {
             });
         }
 
-        console.warn("DID WE GRT INSIDE CommentsHander.getCommentById???");
+        // console.warn("DID WE GRT INSIDE CommentsHander.getCommentById???");
         if (req.user.userId === null) {
             // console.warn();
 
