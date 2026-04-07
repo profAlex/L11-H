@@ -30,6 +30,8 @@ export class CommentsHandler {
         req: RequestWithParams<{ [IdParamName.CommentId]: string }>,
         res: Response,
     ) => {
+        // console.warn("DID WE GRT INSIDE CommentsHander.getCommentById???");
+
         if (req.user === undefined || req.user.userId === undefined) {
             console.error({
                 message:
@@ -43,11 +45,14 @@ export class CommentsHandler {
             });
         }
 
+        console.warn("DID WE GRT INSIDE CommentsHander.getCommentById???");
         if (req.user.userId === null) {
             // console.warn();
-            const result = await this.commentsQueryService.findSingleCommentAnonimously(
-                req.params[IdParamName.CommentId],
-            );
+
+            const result =
+                await this.commentsQueryService.findSingleCommentAnonimously(
+                    req.params[IdParamName.CommentId],
+                );
 
             if (!result) {
                 return res.sendStatus(HttpStatus.NotFound);

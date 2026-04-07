@@ -1,13 +1,7 @@
 import { Schema, model, Model, HydratedDocument } from "mongoose";
 import { CommentStorageModel } from "../routers/router-types/comment-storage-model";
-import { CommentatorInfo } from "../routers/router-types/comment-commentator-info";
-import {
-    LikesInfoStorageModel,
-    LikesInfoViewModel,
-} from "../routers/router-types/comment-likes-info-view-model";
-import { COMMENTS_COLLECTION_NAME } from "./mongo.db";
-import { Document } from "mongodb";
 import { LikeStatus } from "../routers/router-types/comment-like-storage-model";
+import { COMMENTS_COLLECTION_NAME } from "./db-collection-names";
 
 // export type CommentStorageModel = {
 //     _id: ObjectId;
@@ -24,11 +18,6 @@ import { LikeStatus } from "../routers/router-types/comment-like-storage-model";
 //     userLogin: string;
 // };
 
-const CommentatorInfoSchema = new Schema<CommentatorInfo>({
-    userId: { type: String, required: true },
-    userLogin: { type: String, required: true },
-});
-
 // export enum LikeStatus {
 //     None = 'None',
 //     Like = 'Like',
@@ -41,49 +30,62 @@ const CommentatorInfoSchema = new Schema<CommentatorInfo>({
 //     myStatus: LikeStatus;
 // }
 
-
-const LikesInfoStorageSchema = new Schema<LikesInfoStorageModel>({
-    likesCount: { type: Number, required: true, default: 0, min: 0 },
-    dislikesCount: { type: Number, required: true, default: 0, min: 0 },
-    myStatus: {
-        type: String,
-        enum: Object.values(LikeStatus), // [ 'None', 'Like', 'Dislike' ]
-        default: LikeStatus.None,
-        required: true
-    }
-});
-
 const CommentSchema = new Schema<CommentStorageModel>(
     {
         _id: { type: Schema.Types.ObjectId, auto: true },
         id: {
             type: String,
             required: true,
-            default: function (this: CommentStorageModel & Document) {
-                return this._id.toString();
+            default: function (this: any) {
+                return this._id ? this._id.toString() : null;
             },
         },
         relatedPostId: { type: String, required: true },
         content: { type: String, required: true },
-        commentatorInfo: CommentatorInfoSchema,
+
+        commentatorInfo: {
+            userId: { type: String, required: true },
+            userLogin: { type: String, required: true },
+        },
+
         createdAt: { type: Date, required: true },
-        likesInfo: { type: LikesInfoStorageSchema, required: true, default: () => ({})}
+
+        likesInfo: {
+            likesCount: { type: Number, required: true, default: 0, min: 0 },
+            dislikesCount: { type: Number, required: true, default: 0, min: 0 },
+            myStatus: {
+                type: String,
+                enum: Object.values(LikeStatus),
+                default: LikeStatus.None,
+                required: true
+            },
+            _id: false
+        },
     },
     {
         collection: COMMENTS_COLLECTION_NAME,
         timestamps: false,
         versionKey: false,
         id: false,
-        autoIndex: false,
+        autoIndex: false, // Индексы создаем вручную в runDB
     },
 );
+
+// // явно задаем дефолтное значение для всего объекта likesInfo,
+// // чтобы он всегда создавался при CommentModel.create({})
+// CommentSchema.path('likesInfo').default(() => ({
+//     likesCount: 0,
+//     dislikesCount: 0,
+//     myStatus: LikeStatus.None
+// }));
+
+// Составной индекс для быстрой пагинации (поиск по посту + сортировка по дате)
+CommentSchema.index({ relatedPostId: 1, createdAt: -1 });
 
 type CommentModelType = Model<CommentStorageModel>;
 export type CommentDocument = HydratedDocument<CommentStorageModel>;
 
-CommentSchema.index({ relatedPostId: 1, createdAt: -1 });
+export const CommentModel = model<CommentStorageModel, CommentModelType>("Comment", CommentSchema, COMMENTS_COLLECTION_NAME);
+// console.log("🔍 Actual collection name for CommentModel:", CommentModel.collection.name);
 
-export const CommentModel = model<CommentStorageModel, CommentModelType>(
-    "CommentModel",
-    CommentSchema,
-);
+

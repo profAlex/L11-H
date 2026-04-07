@@ -8,6 +8,7 @@ export const optionalAccessTokenGuard = async (
     res: Response,
     next: NextFunction,
 ) => {
+    console.warn("DID WE GET INSIDE optionalAccessTokenGuard???")
     if (!req.headers.authorization){
         req.user = { userId: null };
 

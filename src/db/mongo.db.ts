@@ -12,17 +12,15 @@ import mongoose from "mongoose";
 import { SessionModel } from "./mongoose-session-collection-model";
 import { CommentModel } from "./mongoose-comment-collection-model";
 import { LikeModel } from "./mongoose-like-collection-model";
+import {
+    BLOGGERS_COLLECTION_NAME,
+    COMMENTS_COLLECTION_NAME,
+    POSTS_COLLECTION_NAME, REQUESTS_RESTRICTIONS_COLLECTION_NAME, SESSIONS_COLLECTION_NAME,
+    USERS_COLLECTION_NAME
+} from "./db-collection-names";
 
 const DB_NAME = "bloggers_db";
-export const BLOGGERS_COLLECTION_NAME = "bloggers_collection";
-export const POSTS_COLLECTION_NAME = "posts_collection";
-export const USERS_COLLECTION_NAME = "users_collection";
-export const COMMENTS_COLLECTION_NAME = "comments_collection";
-export const REFRESH_TOKENS_COLLECTION_NAME = "refresh_tokens_collection";
-export const SESSIONS_COLLECTION_NAME = "sessions_collection";
-export const REQUESTS_RESTRICTIONS_COLLECTION_NAME =
-    "requests_restrictions_collection";
-export const LIKES_COLLECTION_NAME = "likes_collection";
+
 
 // const URI ="mongodb+srv://admin:admin@learningcluster.f1zm90x.mongodb.net/?retryWrites=true&w=majority&appName=LearningCluster";
 const URI = "mongodb+srv://geniusb198_db_user:Fb2vAo7qnOhHQmCb@newlearningcluster.1tnov1c.mongodb.net/?appName=NewLearningCluster"

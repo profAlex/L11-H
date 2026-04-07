@@ -65,7 +65,7 @@ export const getSeveralCommentsByPostId = async (
 
         return res.status(HttpStatus.Ok).send(commentsListOutput!);
     } else {
-        //console.warn("NOW WE GOT IN NOT ANONIMOUSLY CALLED ROUTE")
+        //console.warn("NOW WE GOT INSIDE NOT ANONIMOUSLY CALLED ROUTE")
         const commentsListOutput: PaginatedCommentViewModel =
             await dataQueryRepository.getSeveralCommentsByPostId(
                 postId,

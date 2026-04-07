@@ -21,6 +21,7 @@ export class CommentsQueryService {
             return undefined;
         }
 
+        // проверяем репозиторий лайков, смотрим была ли уже реакция на этот коммент от запрашивающего пользователя
         const previousReactionResult: LikeDocument | null =
             await this.likesQueryRepository.checkIfUserAlreadyReacted(
                 sentUserId,

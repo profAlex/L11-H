@@ -191,7 +191,7 @@ describe("Test API for managing comments", () => {
         expect(createComment.body).toHaveProperty("commentatorInfo");
         expect(createComment.body).toHaveProperty("createdAt");
 
-        expect(Object.keys(createComment.body.commentatorInfo).length).toBe(3); // в схеме CommentatorInfo будет свой собственный _id ибо mongoose
+        expect(Object.keys(createComment.body.commentatorInfo).length).toBe(2);
         expect(createComment.body.commentatorInfo).toHaveProperty("userId");
         expect(createComment.body.commentatorInfo).toHaveProperty(
             "userLogin",
@@ -204,7 +204,7 @@ describe("Test API for managing comments", () => {
         //     `${COMMENTS_PATH}/${IdParamName.CommentId}`,
     });
 
-    it("POST /posts/{postId}/comments - shouldn't be able to create comment due to bad input data, or wrong cred, or wrong postId", async () => {
+    it("POST /posts/{postId}/comments - shouldn't be able to create comments due to bad input data, or wrong cred, or wrong postId", async () => {
         const wrongLoginCreds = {
             loginOrEmail: "hello_world",
             password: "helo_world",
@@ -243,7 +243,7 @@ describe("Test API for managing comments", () => {
     });
 
     let commentId: string = "";
-    it("GET /posts/{postId}/comments - successfully retrieving comment without being logged in", async () => {
+    it("GET /posts/{postId}/comments - successfully retrieving comments without being logged in", async () => {
         // const loginCreds = {
         //     loginOrEmail: "hello_world",
         //     password: "hello_world",
@@ -275,7 +275,7 @@ describe("Test API for managing comments", () => {
         expect(retrieveComment.status).toEqual(HttpStatus.Ok);
     });
 
-    it("GET /posts/{postId}/comments - successfully retrieving comment being logged in", async () => {
+    it("GET /posts/{postId}/comments - successfully retrieving comments being logged in", async () => {
         const loginCreds = {
             loginOrEmail: "hello_world",
             password: "hello_world",
@@ -306,7 +306,7 @@ describe("Test API for managing comments", () => {
         expect(retrieveComment.status).toEqual(HttpStatus.Ok);
     });
 
-    it("GET /comments/{commentId}/ - successful retrieving comment", async () => {
+    it("GET /comments/{commentId}/ - successful retrieving comment not being logged in", async () => {
         // const loginCreds = {
         //     loginOrEmail: "hello_world",
         //     password: "hello_world",
@@ -375,6 +375,12 @@ describe("Test API for managing comments", () => {
             password: "hello_world",
         };
 
+        //изобретаем задержку на 10 секунд, чтобы не срабатывал блок по количеству логинов в единицу времени
+        const delay = (ms: number) =>
+            new Promise((resolve) => setTimeout(resolve, ms));
+        await delay(10000); // задержка 10 секунд
+        console.log("Прошло 10 секунд");
+
         const loginAttempt = await request(testApp)
             .post(`${AUTH_PATH}/login`)
             .send(loginCreds);
@@ -396,5 +402,5 @@ describe("Test API for managing comments", () => {
         );
 
         expect(retrieveModifiedComment.status).toEqual(HttpStatus.NotFound);
-    });
+    }, 15000);
 });

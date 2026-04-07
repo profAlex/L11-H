@@ -3,26 +3,29 @@ import { envConfig } from "../config";
 import { SessionStorageModel } from "../routers/router-types/auth-SessionStorageModel";
 import { UUIDgeneration } from "../adapters/randomUUIDgeneration/UUIDgeneration";
 import { CallbackWithoutResultAndOptionalError } from "mongoose";
-import { SESSIONS_COLLECTION_NAME } from "./mongo.db";
+import { SESSIONS_COLLECTION_NAME } from "./db-collection-names";
 
 const SessionSchema = new Schema<SessionStorageModel>(
     {
-        // _id: { type: Schema.Types.ObjectId },
-        userId: { type: String, required: true },
-        deviceId: { type: String },
+        // _id: { type: Schema.Types.ObjectId, auto: true },
 
-        // здесь настройка TTL индекса для автоудаления: заданное время жизни
+        userId: { type: String, required: true },
+        deviceId: { type: String, required: true }, // Сделаем required, так как хук его заполнит
+
+        // TTL индекс: документ удалится из базы автоматически через указанное время ПОСЛЕ issuedAt
         issuedAt: {
             type: Date,
+            required: true,
             expires: envConfig.refreshTokenLifetime + 100,
         },
 
         deviceName: { type: String, required: true },
         deviceIp: { type: String, required: true },
 
-        // Это поле остается для бизнес-логики (проверки валидности токена)
+        // Для бизнес-логики (сравнение дат при валидации токена)
         expiresAt: {
             type: Date,
+            required: true
         },
     },
     {
@@ -50,7 +53,7 @@ SessionSchema.pre<SessionDocument>("validate", async function () {
         this.issuedAt = new Date(timestampSeconds * 1000);
     }
 
-    // 3. Расчет expiresAt
+    // расчет expiresAt
     if (!this.expiresAt) {
         this.expiresAt = new Date(
             this.issuedAt.getTime() + envConfig.refreshTokenLifetime * 1000,
@@ -63,9 +66,11 @@ SessionSchema.pre<SessionDocument>("validate", async function () {
 
 type SessionModelType = Model<SessionStorageModel>;
 export type SessionDocument = HydratedDocument<SessionStorageModel>;
+
 export const SessionModel = model<SessionStorageModel, SessionModelType>(
-    "SessionModel",
+    "Session", // Регистрация как 'Session', чтобы избежать 'sessionmodels'
     SessionSchema,
+    SESSIONS_COLLECTION_NAME
 );
 
 // структура коллекции в базе данных
