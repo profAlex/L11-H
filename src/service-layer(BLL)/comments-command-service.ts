@@ -138,6 +138,10 @@ export class CommentsCommandService {
 
         // если прежней реакции не найдено и новая реакция не None
         if (previousReactionResult === null && sentLike !== "None") {
+            console.warn(
+                "DID WE GET INSIDE если прежней реакции не найдено и новая реакция не None ???",
+            );
+
             const newLikeDocument: LikeDocument = await LikeModel.create({
                 commentId: sentCommentId,
                 userId: sentUserId,
@@ -189,11 +193,19 @@ export class CommentsCommandService {
             previousReactionResult !== null &&
             previousReactionResult.likeStatus !== sentLike
         ) {
+            console.warn(
+                "DID WE GET INSIDE если прежняя реакция найдена и она не равна вновь переданной ???",
+            );
+
             // дополнительное условие - если передали лайк = none - удалить запись из лайк репозитория,
             // не забыть вызвать nullifyReaction
 
             // если новая реакция это None, тогда надо удалить запись лайка в репозитории лайков и сбросить реакцию в комменте
             if (sentLike === "None") {
+                console.warn(
+                    "DID WE GET INSIDE если новая реакция это None, тогда надо удалить запись лайка в репозитории лайков и сбросить реакцию в комменте???",
+                );
+
                 // запоминаем какая реакция была ранее проставлена юзером
                 const previousReaction: LikeStatus =
                     previousReactionResult.likeStatus;
@@ -239,51 +251,55 @@ export class CommentsCommandService {
                     };
                 }
                 // если мы меняем реакцию на Like или Dislike
-                else {
-                    // меняем реакцию на новую
-                    previousReactionResult.likeStatus = sentLike;
+            } else {
+                // меняем реакцию на новую
+                console.warn(
+                    "DID WE GET INSIDE меняем реакцию на Like или Dislike ???",
+                );
 
-                    const ifSavingLikeSuccessful =
-                        await this.likesCommandRepository.saveLikeDocument(
-                            previousReactionResult,
-                        );
+                previousReactionResult.likeStatus = sentLike;
 
-                    if (!ifSavingLikeSuccessful) {
-                        return {
-                            data: null,
-                            statusCode: HttpStatus.InternalServerError,
-                            statusDescription: `Saving like was not successfull for comment ${sentCommentId} inside CommentsCommandService.likeCommentById.`,
-                            errorsMessages: [
-                                {
-                                    field: "if(!ifSavingLikeSuccessful) inside CommentsCommandService.likeCommentById", // это служебная и отладочная информация, к ней НЕ должен иметь доступ фронтенд, обрабатываем внутри периметра работы бэкэнда
-                                    message: `Internal Server Error`,
-                                },
-                            ],
-                        };
-                    }
+                const ifSavingLikeSuccessful =
+                    await this.likesCommandRepository.saveLikeDocument(
+                        previousReactionResult,
+                    );
 
-                    const ifSwitchReactionSuccessfull =
-                        await this.commentsCommandRepository.switchCommentReaction(
-                            sentCommentId,
-                            sentLike,
-                        );
+                if (!ifSavingLikeSuccessful) {
+                    return {
+                        data: null,
+                        statusCode: HttpStatus.InternalServerError,
+                        statusDescription: `Saving like was not successfull for comment ${sentCommentId} inside CommentsCommandService.likeCommentById.`,
+                        errorsMessages: [
+                            {
+                                field: "if(!ifSavingLikeSuccessful) inside CommentsCommandService.likeCommentById", // это служебная и отладочная информация, к ней НЕ должен иметь доступ фронтенд, обрабатываем внутри периметра работы бэкэнда
+                                message: `Internal Server Error`,
+                            },
+                        ],
+                    };
+                }
 
-                    if (!ifSwitchReactionSuccessfull) {
-                        return {
-                            data: null,
-                            statusCode: HttpStatus.InternalServerError,
-                            statusDescription: `Saving reaction was not successfull for comment ${sentCommentId} inside CommentsCommandService.likeCommentById.`,
-                            errorsMessages: [
-                                {
-                                    field: "if(!ifSavingLikeSuccessful) inside CommentsCommandService.likeCommentById", // это служебная и отладочная информация, к ней НЕ должен иметь доступ фронтенд, обрабатываем внутри периметра работы бэкэнда
-                                    message: `Internal Server Error`,
-                                },
-                            ],
-                        };
-                    }
+                const ifSwitchReactionSuccessfull =
+                    await this.commentsCommandRepository.switchCommentReaction(
+                        sentCommentId,
+                        sentLike,
+                    );
+
+                if (!ifSwitchReactionSuccessfull) {
+                    return {
+                        data: null,
+                        statusCode: HttpStatus.InternalServerError,
+                        statusDescription: `Saving reaction was not successfull for comment ${sentCommentId} inside CommentsCommandService.likeCommentById.`,
+                        errorsMessages: [
+                            {
+                                field: "if(!ifSavingLikeSuccessful) inside CommentsCommandService.likeCommentById", // это служебная и отладочная информация, к ней НЕ должен иметь доступ фронтенд, обрабатываем внутри периметра работы бэкэнда
+                                message: `Internal Server Error`,
+                            },
+                        ],
+                    };
                 }
             }
         }
+
         // реакция изменена удачно
         return {
             data: null,

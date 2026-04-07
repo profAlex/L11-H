@@ -13,7 +13,8 @@ export class CommentsQueryRepository {
         if(!isValidObjectId(commentId)) {
             return undefined;
         }
-        console.warn("DID WE GRT INSIDE CommentsQueryRepository.findSingleComment???")
+        //console.warn("DID WE GRT INSIDE CommentsQueryRepository.findSingleComment???")
+
         // .lean() дает чистый JS-объект без методов Mongoose
         const comment = await CommentModel.findById(commentId).lean();
 

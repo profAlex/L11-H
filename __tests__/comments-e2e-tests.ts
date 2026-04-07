@@ -38,13 +38,13 @@ describe("Test API for managing comments", () => {
     beforeAll(async () => {
         await runDB();
 
-        // так как байндятся в .inSingletonScope(); то это будет работать и вот так с псевдосоазданием нового инстанса
+        // так как байндятся в .inSingletonScope(); то это будет работать и вот так с псевдосоазданием нового инстанса commentsQueryService
         jest.spyOn(
             commentsQueryService,
             "findSingleComment",
         );
 
-        // но надежнее через прототип шпионить
+        // но надежнее шпионить через прототип
         jest.spyOn(
             CommentsQueryService.prototype,
             "findSingleCommentAnonimously",
@@ -54,9 +54,7 @@ describe("Test API for managing comments", () => {
         expect(res.status).toBe(204);
     });
 
-    // afterEach(() => {
-    //     jest.restoreAllMocks(); // Возвращает все методы к их оригинальному (не шпионскому) состоянию
-    // });
+
 
     afterAll(async () => {
         const res = await request(testApp).delete(`${TESTING_PATH}/all-data`);
