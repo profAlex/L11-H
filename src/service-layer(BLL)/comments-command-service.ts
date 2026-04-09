@@ -138,9 +138,7 @@ export class CommentsCommandService {
 
         // если прежней реакции не найдено и новая реакция не None
         if (previousReactionResult === null && sentLike !== "None") {
-            console.warn(
-                "DID WE GET INSIDE если прежней реакции не найдено и новая реакция не None ???",
-            );
+            // console.warn("DID WE GET INSIDE если прежней реакции не найдено и новая реакция не None ???");
 
             const newLikeDocument: LikeDocument = await LikeModel.create({
                 commentId: sentCommentId,
